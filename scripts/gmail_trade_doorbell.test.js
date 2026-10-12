@@ -21,9 +21,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // The stub models the Gmail facts the finding (TODO C2) rests on: labels live on threads,
 // `thread.addLabel` marks the whole thread, a message that arrives later threads under the same
 // subject, and `-label:X` in the search drops a thread that carries X. The clock is `state.now`.
-function makeEnv({searchFails = 0, fireCodes = [200], labelFails = 0, msgId = 'm1'} = {}) {
+// `searchHangMs` is how long each failing search blocks before it throws (the clock moves);
+// `state.propsDown` / `state.lockDown` make PropertiesService / LockService throw the same fault.
+function makeEnv({searchFails = 0, fireCodes = [200], labelFails = 0, msgId = 'm1', searchHangMs = 0} = {}) {
   const state = { props: {FF_TRADE_ROUTINE_ID: 'trig_x', FF_ROUTINE_FIRE_TOKEN: 'tok'},
-                  fires: 0, fired: [], labels: 0, mails: [], slept: 0, searches: 0,
+                  fires: 0, fired: [], labels: 0, mails: [], slept: 0, searches: 0, released: 0,
+                  propsDown: false, lockDown: false, releaseDown: false,
                   now: Date.parse('2026-09-20T00:00:00Z'), threads: [] };
   let sf = searchFails, lf = labelFails, fi = 0;
   const makeMsg = (id, at) => ({ getId: () => id, getSubject: () => SUBJECT,
@@ -46,19 +49,24 @@ function makeEnv({searchFails = 0, fireCodes = [200], labelFails = 0, msgId = 'm
     console, Date: FakeDate, Math, JSON, Array, Object, String, Number, parseInt, Error,
     GmailApp: {
       search: (q, start, max) => { state.searches++;
-        if (sf-- > 0) throw new Error('We\'re sorry, a server error occurred.');
+        if (sf-- > 0) { state.now += searchHangMs; throw new Error('We\'re sorry, a server error occurred.'); }
         const excluded = /-label:(\S+)/.exec(q);
         return state.threads.filter(t => !excluded || !t.labels.some(l => l.getName() === excluded[1]))
           .slice(start || 0, (start || 0) + (max || 100)); },
       getUserLabelByName: () => label, createLabel: () => label },
     PropertiesService: { getScriptProperties: () => ({
-      getProperty: k => (k in state.props ? state.props[k] : null),
+      getProperty: k => { if (state.propsDown) throw new Error('We\'re sorry, a server error occurred.');
+                          return k in state.props ? state.props[k] : null; },
       setProperty: (k, v) => { state.props[k] = v; },
       deleteProperty: k => { delete state.props[k]; } }) },
     UrlFetchApp: { fetch: (url, opts) => { state.fires++; state.fired.push(JSON.parse(opts.payload).text);
       const c = fireCodes[Math.min(fi++, fireCodes.length - 1)];
       return { getResponseCode: () => c, getContentText: () => 'body' }; } },
-    LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => {} }) },
+    LockService: { getScriptLock: () => {
+      if (state.lockDown) throw new Error('We\'re sorry, a server error occurred.');
+      return { tryLock: () => true,
+               releaseLock: () => { if (state.releaseDown) throw new Error('We\'re sorry, a server error occurred.');
+                                    state.released++; } }; } },
     Utilities: { sleep: ms => { state.slept += ms; } },
     Session: { getEffectiveUser: () => ({ getEmail: () => 'dbj2297@gmail.com' }) },
     MailApp: { sendEmail: (to, subj, body) => state.mails.push({to, subj}) },
@@ -85,6 +93,51 @@ console.log('search down all attempts: run stays quiet until the 5th consecutive
   let threw = false;
   try { ctx.checkForTradeOffers(); } catch (e) { threw = true; }
   eq('5th failure surfaces to Apps Script', threw, true); }
+
+console.log('Google fault reaches the failure counter too (2026-10-11): the run still ends quietly');
+{ const {ctx, state} = makeEnv({searchFails: 99});
+  state.propsDown = true;                   // every Google service is faulting, not just Gmail
+  let threw = false;
+  try { ctx.checkForTradeOffers(); } catch (e) { threw = true; }
+  eq('nothing escapes the catch block', threw, false);
+  eq('lock still released', state.released, 1);
+  state.propsDown = false;                  // Google recovers: the counter resumes from where it was
+  ctx.checkForTradeOffers();
+  eq('counted from the next failure on', state.props.ff_failed_runs, '1'); }
+
+console.log('lock service faults: quiet, nothing fired, counted as a failed run');
+{ const {ctx, state} = makeEnv();
+  state.lockDown = true;
+  let threw = false;
+  try { ctx.checkForTradeOffers(); } catch (e) { threw = true; }
+  eq('nothing escapes', threw, false);
+  eq('no fire without the lock', state.fires, 0);
+  eq('counted', state.props.ff_failed_runs, '1');
+  state.lockDown = false;
+  ctx.checkForTradeOffers();
+  eq('fires once the lock is back', state.fires, 1);
+  eq('counter cleared', state.props.ff_failed_runs, undefined); }
+
+console.log('lock release faults after a good run: swallowed');
+{ const {ctx, state} = makeEnv();
+  state.releaseDown = true;
+  let threw = false;
+  try { ctx.checkForTradeOffers(); } catch (e) { threw = true; }
+  eq('nothing escapes', threw, false);
+  eq('fired', state.fires, 1);
+  eq('run counted as a success', state.props.ff_failed_runs, undefined); }
+
+console.log('a search that hangs for minutes is not retried past the budget (one hang, not three)');
+{ const {ctx, state} = makeEnv({searchFails: 99, searchHangMs: 150 * 1000});
+  ctx.checkForTradeOffers();
+  eq('one attempt', state.searches, 1);
+  eq('no backoff sleep', state.slept, 0);
+  eq('one failed run recorded, quietly', state.props.ff_failed_runs, '1'); }
+
+console.log('a search that fails fast still gets its three attempts inside the budget');
+{ const {ctx, state} = makeEnv({searchFails: 99, searchHangMs: 30 * 1000});
+  ctx.checkForTradeOffers();
+  eq('three attempts', state.searches, 3); }
 
 console.log('fire rejected with 401: no label, no duplicate, email after 3 tries');
 { const {ctx, state} = makeEnv({fireCodes: [401]});

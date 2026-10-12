@@ -7,7 +7,11 @@
  *
  * Three things keep a bad minute from costing an alert:
  *   - transient Google faults are retried, and a single failed run stays quiet (the next minute
- *     re-runs anyway); only a sustained outage is allowed to raise Apps Script's failure notice
+ *     re-runs anyway); only a sustained outage is allowed to raise Apps Script's failure notice.
+ *     The quiet path cannot itself depend on a Google service that may be down: the lock, the
+ *     failure counter and the lock release are each guarded, and a Google call that hangs instead
+ *     of failing fast is not retried past RETRY_BUDGET_MS (2026-10-11: one hung search retried for
+ *     eight minutes, then the counter write threw the same server error out of the catch block)
  *   - a message id is recorded as fired *before* the thread is labeled, so a failed label write
  *     cannot cause a second alert for the same proposal
  *   - a fire that keeps being rejected (rotated token, deleted routine) emails you directly,
@@ -34,6 +38,10 @@ var SEARCH = 'from:fantasy@espnmail.com subject:"Trade Proposal" newer_than:2h';
 // Retries for transient Google faults ("a server error occurred", Gmail backend hiccups).
 var RETRY_ATTEMPTS = 3;
 var RETRY_BASE_MS = 1000;
+// A faulting Google call can hang for minutes before it throws. Once a run is this far in, no
+// further attempt is started: the trigger fires again in a minute anyway, and a run that keeps
+// retrying hung calls holds the lock and runs into Apps Script's execution limit.
+var RETRY_BUDGET_MS = 2 * 60 * 1000;
 
 // A run that throws is normally swallowed: the trigger fires again in a minute. Only this many
 // consecutive failures means something is actually wrong, and Apps Script should say so.
@@ -54,26 +62,68 @@ var PROP_FIRE_FAILURES = 'ff_fire_failures';
 var PROP_LAST_ESCALATION = 'ff_last_escalation_ms';
 var PROP_FIRED_IDS = 'ff_fired_message_ids';
 
+var runStartedMs_ = 0;
+
 function checkForTradeOffers() {
-  var lock = LockService.getScriptLock();
-  if (!lock.tryLock(5000)) {
-    // A previous minute is still working. Nothing is lost; it holds the same search.
-    console.log('Another run is in progress; skipping this minute.');
+  runStartedMs_ = Date.now();
+  var lock;
+  try {
+    lock = LockService.getScriptLock();
+    if (!lock.tryLock(5000)) {
+      // A previous minute is still working. Nothing is lost; it holds the same search.
+      console.log('Another run is in progress; skipping this minute.');
+      return;
+    }
+  } catch (err) {
+    // The lock service itself faulted. Without the lock two minutes could fire for the same
+    // proposal, so this minute does nothing; the next one re-runs.
+    noteFailedRun_(err);
     return;
   }
   try {
     checkOnce_();
     recordRunOutcome_(true);
   } catch (err) {
-    var inARow = recordRunOutcome_(false);
-    console.log('Run failed (' + inARow + ' in a row): ' + err);
-    if (inARow >= FAILED_RUNS_BEFORE_ALARM) {
-      // Sustained failure: let it surface as an Apps Script failure notification.
-      throw err;
-    }
+    noteFailedRun_(err);
   } finally {
-    lock.releaseLock();
+    try {
+      lock.releaseLock();
+    } catch (err) {
+      // The lock expires on its own when the run ends; nothing to do but say so.
+      console.log('Could not release the lock: ' + err);
+    }
   }
+}
+
+/**
+ * Counts a failed run and stays quiet unless the failure is sustained. The count lives in Script
+ * Properties, and during a Google fault that write can throw the same server error as the run
+ * did; a throw from here would be the one that reaches Apps Script's failure notice, so a counter
+ * that cannot be written is logged and the run ends quietly.
+ */
+function noteFailedRun_(err) {
+  var inARow;
+  try {
+    inARow = recordRunOutcome_(false);
+  } catch (propsErr) {
+    console.log('Run failed: ' + err + '; could not record it either (' + propsErr + '). The next minute re-runs.');
+    return;
+  }
+  console.log('Run failed (' + inARow + ' in a row): ' + err);
+  if (inARow >= FAILED_RUNS_BEFORE_ALARM) {
+    // Sustained failure: let it surface as an Apps Script failure notification.
+    throw err;
+  }
+}
+
+/** False once the run has spent its retry budget: the next minute takes over instead. */
+function retryAllowed_(what) {
+  var spent = Date.now() - runStartedMs_;
+  if (spent <= RETRY_BUDGET_MS) {
+    return true;
+  }
+  console.log(what + ': ' + Math.round(spent / 1000) + 's into the run, past the retry budget; leaving it to the next minute.');
+  return false;
 }
 
 function checkOnce_() {
@@ -200,6 +250,9 @@ function fireRoutine_(routineId, token, subject, date) {
   var lastDetail = '';
   for (var attempt = 0; attempt < RETRY_ATTEMPTS; attempt++) {
     if (attempt > 0) {
+      if (!retryAllowed_('fire')) {
+        break;
+      }
       Utilities.sleep(RETRY_BASE_MS * Math.pow(2, attempt - 1));
     }
     var code;
@@ -221,11 +274,17 @@ function fireRoutine_(routineId, token, subject, date) {
   return { ok: false, detail: lastDetail };
 }
 
-/** Runs fn, retrying transient Google faults with backoff. Throws the last error if all fail. */
+/**
+ * Runs fn, retrying transient Google faults with backoff. Throws the last error if all fail, or
+ * as soon as the run is past RETRY_BUDGET_MS (a call that hung is not worth a second hang).
+ */
 function withRetry_(what, fn) {
   var lastErr;
   for (var attempt = 0; attempt < RETRY_ATTEMPTS; attempt++) {
     if (attempt > 0) {
+      if (!retryAllowed_(what)) {
+        break;
+      }
       Utilities.sleep(RETRY_BASE_MS * Math.pow(2, attempt - 1));
     }
     try {
@@ -367,6 +426,7 @@ function maybeEscalate_(props, failuresInARow, subject, detail) {
  * routine stops without emailing, so this is safe to run any time.
  */
 function fireTestOffer() {
+  runStartedMs_ = Date.now();
   var props = PropertiesService.getScriptProperties();
   var routineId = props.getProperty('FF_TRADE_ROUTINE_ID');
   var token = props.getProperty('FF_ROUTINE_FIRE_TOKEN');

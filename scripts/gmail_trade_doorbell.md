@@ -49,7 +49,12 @@ that Gmail threads under the first one (ESPN's subject is the same every time) s
 - **Transient Google faults** (`We're sorry, a server error occurred`) are retried three times with
   backoff inside the run. If the run still fails it stays quiet, because the trigger fires again in a
   minute. Only **5 consecutive** failed runs are allowed to raise an Apps Script failure notification,
-  so a one-off blip no longer emails you.
+  so a one-off blip no longer emails you. The quiet path is itself fault-proof: the lock, the failure
+  counter write and the lock release are each guarded, because during a Google fault they throw the
+  same error as the search did, and until 2026-10-12 the counter write in the catch block was the
+  throw that reached the failure notice. A Google call that hangs for minutes instead of failing fast
+  is not retried once the run is 2 minutes in (`RETRY_BUDGET_MS`); the next minute takes over rather
+  than three hangs stacking up to the 6-minute execution limit.
 - **A rejected fire** (rotated token, deleted routine) is the dangerous case: it means no alert will
   ever arrive, and the only other record is a log nobody reads. After **3 rejections in a row** the
   script emails you `FF trade doorbell — cannot reach the trade routine`, at most once an hour.
