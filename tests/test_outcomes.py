@@ -202,3 +202,28 @@ def test_the_history_view_does_not_overrule_a_counter_or_an_acceptance(tmp_path)
     # shows the swap is an acceptance whatever the history says.
     pk["leagues"][0]["trade_resolutions"] = {"a": {"status": "declined", "by": 4, "ts": 1}, "b": {"status": "declined", "by": 6, "ts": 1}}
     assert sorted(record_outcomes(pk, path, date(2026, 10, 8))) == ["L1|a: countered", "L1|b: accepted"]
+
+
+def test_an_accepted_trade_stays_open_through_the_review_period_and_closes_as_accepted(tmp_path):
+    """2026-10-13: the Hubbard trade was accepted Tuesday morning and processed Wednesday. The pending view kept it
+    (type TRADE_ACCEPT) but the reader dropped it, the players had not moved yet, and the log closed it as his
+    decline (`recent_decline` on every package to him for a week). Now the row rides `outgoing_trades` with
+    `accepted` while it waits, and ESPN's history (`trade_resolutions`) says accepted even before the rosters move."""
+    path = tmp_path / "o.json"
+    d1, d2, d3 = date(2026, 10, 13), date(2026, 10, 13), date(2026, 10, 14)
+    o = offer("a", ["Tuten", "Coker", "Rodriguez"], ["Hubbard"], expires="2026-10-14T17:04")
+    assert record_outcomes(_packet([o]), path, d1) == ["L1|a: opened"]
+    # later that morning: accepted, still pending on ESPN -> still open, nothing to close
+    accepted = {**o, "accepted": True, "process_ts": _ms("2026-10-14T14:05"), "processes_iso": "2026-10-14T08:05"}
+    assert record_outcomes(_packet([accepted], roster_names=("Tuten", "Coker", "Rodriguez")), path, d2) == []
+    assert load_outcomes(path)["L1|a"]["status"] == "open"
+    # Wednesday: processed, gone from pending, Hubbard on my roster -> accepted
+    assert record_outcomes(_packet([], roster_names=("Hubbard",)), path, d3) == ["L1|a: accepted"]
+    # and the history view alone is enough when the rosters have not moved (a run between his click and the processing
+    # in a league whose reader lost the row)
+    record_outcomes(_packet([offer("b", ["X"], ["Y"])]), path, d1)
+    pk = _packet([], roster_names=("X",))
+    pk["leagues"][0]["trade_resolutions"] = {"b": {"status": "accepted", "by": 4, "ts": 1}}
+    assert record_outcomes(pk, path, d2) == ["L1|b: accepted"]
+    h = history(load_outcomes(path), "L1", d3)
+    assert h[4]["recent_decline"] is False and h[4]["n"] == 2 and h[4]["prior"] == 0.833

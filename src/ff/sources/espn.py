@@ -216,15 +216,21 @@ def pending_trades(league: League, my_team_id: int | None) -> list[dict[str, Any
     espn-api's Transaction wrapper drops the item direction and the proposal id, so this reads the JSON directly.
     Use this view, not mTransactions2: the history view keeps showing a proposal as PENDING after it was declined
     (what it does expose about a closed proposal is read by `trade_resolutions`).
-    Each entry: {id, proposer_team_id, proposed_ts, expires_ts, status, team_actions, direction, give, get} where
-    `give` are espn player ids leaving my roster and `get` are ids joining it (direction is from my point of view).
+    An accepted trade stays in this view through the league's review period: the same record, same id, with its
+    `type` turned from TRADE_PROPOSAL to TRADE_ACCEPT, every team ACCEPTED in `teamActions` and `processDate` the
+    clock ESPN executes it on (probed 2026-10-13: accepted Tuesday morning, processed Wednesday 8:05 AM Denver).
+    Until that date the players are still on their old rosters; ESPN's app lists it under Pending Trades as
+    "Accepted". It used to be dropped here as not-a-proposal, so the outcome log closed it as a decline.
+    Each entry: {id, proposer_team_id, proposed_ts, expires_ts, process_ts, status, accepted, team_actions,
+    direction, give, get} where `give` are espn player ids leaving my roster and `get` are ids joining it (direction
+    is from my point of view) and `accepted` says both sides have said yes and only the processing is left.
     """
     if my_team_id is None:
         return []
     raw = league.espn_request.league_get(params={"view": "mPendingTransactions"})
     out = []
     for tx in raw.get("pendingTransactions") or []:
-        if tx.get("type") != "TRADE_PROPOSAL":
+        if tx.get("type") not in ("TRADE_PROPOSAL", "TRADE_ACCEPT"):
             continue
         items = [i for i in tx.get("items", []) if i.get("type") == "TRADE"]
         give = [i["playerId"] for i in items if i.get("fromTeamId") == my_team_id]
@@ -238,7 +244,9 @@ def pending_trades(league: League, my_team_id: int | None) -> list[dict[str, Any
             "id": tx.get("id"), "proposer_team_id": proposer,
             "rival_team_id": next(iter(other), None) if proposer == my_team_id else proposer,
             "proposed_ts": tx.get("proposedDate"), "expires_ts": tx.get("expirationDate"),
-            "status": tx.get("status"), "team_actions": tx.get("teamActions") or {},
+            "process_ts": tx.get("processDate") if tx.get("type") == "TRADE_ACCEPT" else None,
+            "status": tx.get("status"), "accepted": tx.get("type") == "TRADE_ACCEPT",
+            "team_actions": tx.get("teamActions") or {},
             "direction": "outgoing" if proposer == my_team_id else "incoming",
             "give": give, "get": get,
         })
@@ -254,8 +262,11 @@ def trade_resolutions(league: League, my_team_id: int | None) -> dict[str, dict[
     proposal with `executionType: CANCEL`, `status: CANCELED` carrying his member id, same millisecond. A lapse is the
     CANCEL copy alone under a member id that owns no team (ESPN's job, 51 s after `expirationDate`). A proposal I
     withdraw in the app has not been observed (this code never writes); by the same pattern it is the CANCEL copy with
-    my member id and no decline. `status` is declined / withdrawn / expired, `by` the team id of the member who did it
-    (None for ESPN), `ts` the record's clock. Every proposal the view relates to is listed; the caller looks up its own.
+    my member id and no decline. An acceptance is a `TRADE_ACCEPT` record under the rival's member id pointing back
+    at the proposal (probed 2026-10-13; its items are the drops his roster needed to fit the trade), written the moment
+    he clicks, before the review period runs out, and it wins over any cancel copy. `status` is accepted / declined /
+    withdrawn / expired, `by` the team id of the member who did it (None for ESPN), `ts` the record's clock. Every
+    proposal the view relates to is listed; the caller looks up its own.
     """
     if my_team_id is None:
         return {}
@@ -275,7 +286,9 @@ def trade_resolutions(league: League, my_team_id: int | None) -> dict[str, dict[
         if not rel:
             continue
         by = owners.get(str(tx.get("memberId") or "").upper())
-        if tx.get("type") == "TRADE_DECLINE":
+        if tx.get("type") == "TRADE_ACCEPT":
+            out[rel] = {"status": "accepted", "by": by, "ts": tx.get("proposedDate")}
+        elif tx.get("type") == "TRADE_DECLINE" and (out.get(rel) or {}).get("status") != "accepted":
             out[rel] = {"status": "declined", "by": by, "ts": tx.get("proposedDate")}   # his answer, whatever the copy says
         elif tx.get("type") == "TRADE_PROPOSAL" and tx.get("executionType") == "CANCEL" and rel not in out:
             status = "withdrawn" if by == my_team_id else "declined" if by is not None else "expired"

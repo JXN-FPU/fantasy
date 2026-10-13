@@ -1,4 +1,4 @@
-# FF briefing — 2026-10-10
+# FF briefing — 2026-10-13
 
 ## Demo League
 _4-0 · vs Bye Week Blues · win 59% · playoffs 97.6% · title 21.4%_  
@@ -9,10 +9,10 @@ _4-0 · vs Bye Week Blues · win 59% · playoffs 97.6% · title 21.4%_
 - **Stream:** swap in Texans D/ST at D/ST (+2.6 this week)
 - **Lineup (in order):** Cole Ibarra: QB → bench · Beau Whitlock: bench → QB · Nico Vell: bench → RB/WR/TE · Jermaine Vell: free agent → TE over Reggie Lindqvist once the add above is through
 - **Already sent:** your Rico Achebe for Rico Saldana is still waiting on Waiver Wire Widows, 21h left
-- **Trade (worth sending):** offer Bye Week Blues your Beau Whitlock for Darius Solano, Dontae Rutherford (+2.2 pts/wk for you, +0.9 for them, coin flip, p(accept) 0.43); drop Rico Achebe in the trade screen (ESPN caps TE at 3); he'd start Jermaine Vell (the wire), Beau Bassett (the wire) at TE; Jaxon Bassett (the wire), Landon Marchetti (the wire) at RB after — they start Darius Solano today; they start Dontae Rutherford today; leaves you no backup QB — **note:** send it Monday, not today: Ibarra is a game-time call and Whitlock is your only other QB this week
+- **Trade (worth sending):** offer Bye Week Blues your Nico Vell for Dontae Rutherford (+1.1 pts/wk for you, +0.3 for them, coin flip, p(accept) 0.46); he'd start Jaxon Bassett (the wire), Landon Marchetti (the wire) at RB after — they start Dontae Rutherford today — **note:** send it today: Rutherford practiced in full, and Bye Week Blues has been streaming RB all month anyway, so the wire bodies the row names are what he runs out now
 
-**Claude's read:** Rutherford's boot was precautionary and he practiced in full Thursday, so the package is live. Ibarra is still a game-time call, so Whitlock has to stay through Sunday; send the offer Monday. Brandt is a bye-week body until Sorensen is back in week 9, not a starter.  
-**Paste to Bye Week Blues:** "hey, would you do Solano + Rutherford for Whitlock? you've been streaming QB and he'd start for you every week, and I need the bodies back for byes. no worries if not"  
+**Claude's read:** Rutherford's boot was precautionary and he practiced in full Thursday, so the ask is live. Ibarra is still a game-time call, so Whitlock starts Sunday. Brandt is a bye-week body until Sorensen is back in week 9, not a starter.  
+**Paste to Bye Week Blues:** "hey, would you do Nico Vell for Rutherford? you've been thin at WR and he'd start for you every week, and I need an RB body back for byes. no worries if not"  
 **Reply to The Tuesday Regrets:** "appreciate it but I'm gonna hold for now, hit me up if you'd do Kowalczyk for Haggerty straight up"  
 
 **Out:** Grady Sorensen out ~4 wks, back wk 9 (demo); Malik Okafor out ~1 wk, back wk 6 (demo)  
@@ -21,7 +21,7 @@ _4-0 · vs Bye Week Blues · win 59% · playoffs 97.6% · title 21.4%_
 
 _Full detail below._
 
-# Detail — 2026-10-10
+# Detail — 2026-10-13
 
 
 ---
@@ -77,9 +77,9 @@ Handcuffs: Rico Pennington for Deon Castellano (owned); Deshawn Haggerty for Jal
 Your open offers: Rico Achebe for Rico Saldana to Waiver Wire Widows
 
 ## Trade candidates
-- **Give Nico Vell → get Darius Solano** from Bye Week Blues: me +2.1 ppw, them -0.5 ppw · title odds me +7.3 / them -0.1 · p(accept) 0.46 (coin flip: it starts for him; I ask for a player he starts today; he is out of it and sellers go quiet) · he'd start Jermaine Vell (the wire) at TE after. they start Darius Solano today; fills my TE hole; fills their WR hole
-- **Give Nico Vell → get Dontae Rutherford, Tobias Farrow** from Bye Week Blues: me +1.9 ppw, them -0.5 ppw · title odds me +11.7 / them -0.2 · p(accept) 0.46 (coin flip: it starts for him; I ask for a player he starts today; he is out of it and sellers go quiet) · he'd start Jaxon Bassett (the wire), Landon Marchetti (the wire) at RB; Darius Solano, Jermaine Vell (the wire) at TE after. they start Dontae Rutherford today; fills my RB hole; fills my TE hole; fills their WR hole
-- **Give Beau Whitlock → get Darius Solano, Dontae Rutherford** from Bye Week Blues: me +2.2 ppw, them +0.9 ppw · title odds me +20.5 / them -0.2 · p(accept) 0.43 (coin flip: it starts for him; I ask for a player he starts today; it is his weakest slot; he is out of it and sellers go quiet) · he'd start Jermaine Vell (the wire), Beau Bassett (the wire) at TE; Jaxon Bassett (the wire), Landon Marchetti (the wire) at RB after. they start Darius Solano today; they start Dontae Rutherford today; fills my TE hole; fills my RB hole; fills their QB hole; leaves me no backup QB
+- **Give Silas Pennington → get Tobias Ruiz-Hollis, Tyrek Grantham** from Sunday Scaries: me +0.9 ppw, them -0.7 ppw · title odds me +8.2 / them -8.1 · p(accept) 0.54 (coin flip: it starts for him; I ask for a player he starts today). they start Tobias Ruiz-Hollis today
+- **Give Nico Vell → get Dontae Rutherford** from Bye Week Blues: me +1.1 ppw, them +0.3 ppw · title odds me +6.1 / them -0.1 · p(accept) 0.46 (coin flip: it starts for him; I ask for a player he starts today; he is out of it and sellers go quiet) · he'd start Jaxon Bassett (the wire), Landon Marchetti (the wire) at RB after. they start Dontae Rutherford today; fills my RB hole; fills their WR hole
+- **Give Nico Vell → get Darius Solano** from Bye Week Blues: me +2.1 ppw, them -0.5 ppw · title odds me +7.3 / them -0.1 · p(accept) 0.23 (not a row: it starts for him; I ask for a player he starts today; he'd have to stream TE this week; he is out of it and sellers go quiet) · he'd start Jermaine Vell (the wire) at TE after. they start Darius Solano today; fills my TE hole; fills their WR hole; they'd have to stream TE this week
 
 ## League odds
 | team | record | playoff % | title % | exp wins |

@@ -154,3 +154,25 @@ def starters_this_week(roster: list[PlayerProj], slots: dict[str, int], ctx: Sea
     vals = [(p, weekly_values(p, ctx.week, 1)[0]) for p in pool]
     _, used = greedy_lineup(vals, slots)
     return [p for p in pool if p.espn_id in used and p.pos == pos]
+
+
+def starters_ros(roster: list[PlayerProj], slots: dict[str, int], ctx: SeasonCtx, pos: str) -> list[PlayerProj]:
+    """Who fills `pos` over the rest of the season (each week weighted as the context weighs it), free agents
+    included. `starters_this_week` is one week, and a bye there makes the wire's streamer his "starter": Oct 13, BUTT
+    MUNCH's Burrow on bye read as "he'd start Aaron Rodgers (the wire) at QB" on a row asking for Purdy, when Burrow
+    was the QB he kept."""
+    pool = list(roster) + [f for f in ctx.fa_pool if f.espn_id not in {p.espn_id for p in roster}]
+    W = max(ctx.weeks_remaining, 1)
+    weights = list(ctx.weights) if len(ctx.weights) == W else [1.0] * W
+    vals = [(p, sum(v * w for v, w in zip(weekly_values(p, ctx.week, W), weights))) for p in pool]
+    _, used = greedy_lineup(vals, slots)
+    return [p for p in pool if p.espn_id in used and p.pos == pos]
+
+
+def idle_this_week(p: PlayerProj, ctx: SeasonCtx) -> str | None:
+    """Why `p` gives nothing in the first remaining week: "on bye this week", "out this week", else None."""
+    if ctx.week in set(p.bye_weeks or []):
+        return "on bye this week"
+    if weekly_values(p, ctx.week, 1)[0] <= 0:
+        return "out this week"
+    return None

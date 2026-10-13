@@ -188,3 +188,40 @@ def test_a_set_lineup_on_sunday_is_the_opponents_strength(monkeypatch):
     assert mid_full["lineup"] == "set" and mid_full["mu"] < mid["mu"]
     # fixtures and the demo pass no `now`: nothing changes with the calendar there
     assert run(snap, None)["opponent"]["lineup"] == "set"
+
+
+def test_an_accepted_trade_is_applied_to_the_rosters_before_it_processes(monkeypatch):
+    """Oct 13: the Hubbard trade was accepted Tuesday and processed Wednesday. Until then ESPN keeps the players on
+    their old rosters, so the card named one of them as a claim's drop (ESPN refuses) and put another in Sunday's
+    lineup. The packet now moves them up front: the incoming player is mine (on the bench, `pending_trade` "in"),
+    the outgoing ones are gone from every row but the Accepted one, today's open spots are still today's bodies,
+    and the spots the trade frees are listed with who fills them."""
+    monkeypatch.setattr("ff.packet.fantasycalc.by_espn_id", lambda **kw: {})
+    base_snap = make_snapshot()
+    base = analyze_league(base_snap, FakeXW(), {}, {}, {}, {}, overrides=None, sims=100)
+    snap = make_snapshot()
+    by_id = {r["espn_id"]: r["name"] for r in snap["roster"]}
+    out = snap["pending_trades"][1]
+    extra = next(r["espn_id"] for r in snap["roster"] if r["fantasy_team_id"] == 1 and r["pos"] == "WR" and r["slot"] == "BE")
+    out.update({"accepted": True, "process_ts": 1791986732413, "give": out["give"] + [extra]})  # a 2-for-1 I send
+    give, get = [by_id[i] for i in out["give"]], [by_id[i] for i in out["get"]]
+    blk = analyze_league(snap, FakeXW(), {}, {}, {}, {}, overrides=None, sims=100)
+    names = {p["name"]: p for p in blk["roster"]}
+    assert get[0] in names and names[get[0]]["pending_trade"] == "in" and names[get[0]]["slot"] == "BE"
+    assert not any(n in names for n in give)
+    assert blk["pending_moves"] == [{"id": "out-1", "in": get, "out": give, "process_ts": 1791986732413}]
+    assert blk["open_spots"] == base["open_spots"] and blk["trade_spots_after"] == 1
+    assert len(blk["trade_adds_after"]) == 1 and blk["trade_adds_after"][0]["name"] not in {a["name"] for a in blk["open_spot_adds"]}
+    acc = [t for t in blk["outgoing_trades"] if t.get("accepted")]
+    assert len(acc) == 1 and acc[0]["give"] == give and acc[0]["get"] == get and acc[0]["processes_iso"]
+    assert len(blk["incoming_trades"]) == 1  # the other proposal is still an offer to rule on
+    rows = report.todos(blk)
+    sent = next(x for x in rows if x["kind"] == "sent")
+    assert "is accepted, processes" in sent["text"] and "frees 1 bench spot when it processes" in sent["text"]
+    assert f"then add {blk['trade_adds_after'][0]['name']}" in sent["text"]
+    for x in rows:
+        if x["kind"] != "sent":
+            assert not any(n in x["text"] for n in give), (x["kind"], x["text"])
+    # the rival's side: he has my two, not his one
+    rival_rows = [p for p in snap["roster"] if p["fantasy_team_id"] == 3]
+    assert rival_rows and blk["rival_needs"]  # his roster still prices (no crash on the moved bodies)

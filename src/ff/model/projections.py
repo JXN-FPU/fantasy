@@ -67,6 +67,7 @@ class PlayerProj:
     sources: dict = field(default_factory=dict)
     flags: list[str] = field(default_factory=list)
     locked: bool = False          # game started/finished: ESPN won't let this player change slots
+    pending_trade: str | None = None  # "in" / "out": moved by an accepted trade ESPN has not processed yet (packet.apply_accepted_trades)
     actual: float | None = None   # points scored so far this week (None if not started)
     mu_pre: float | None = None   # the projection before the clock banked his points: what the accuracy log scores
     sigma_ros: float | None = None  # pre-lock sigma, kept so rest-of-season copies aren't deterministic

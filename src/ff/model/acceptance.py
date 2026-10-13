@@ -32,6 +32,7 @@ class Signals:
     asks_starter: int = 0              # pieces I ask for that he starts today
     cannot_field: bool = False         # he could not fill a slot after
     thin_after: list[str] = field(default_factory=list)   # QB/TE with no healthy backup after, that had one before
+    streams_this_week: list[str] = field(default_factory=list)  # QB/TE/K/DST slots the wire fills for him this Sunday after (a bye, an injury)
     squeeze: bool = False              # 2-for-1 onto a full roster: he cuts someone
     need_match: bool = False           # the position he receives is his weakest starting slot by his numbers
     app_grade: str | None = None       # "above" / "below" his positional average on ESPN's numbers
@@ -88,6 +89,10 @@ def score(s: Signals) -> tuple[float, list[str]]:
         mul(0.75 ** s.asks_starter, "I ask for a player he starts today")
     if s.thin_after:
         mul(0.85, f"leaves him no backup {', '.join(s.thin_after)}")
+    if s.streams_this_week:
+        # Oct 13: Purdy asked from a roster whose other QB (Burrow) was on bye that week. He would start a streamer on
+        # Sunday to make the deal; nobody does that mid-week. Next week the same ask is a different trade.
+        mul(0.5, f"he'd have to stream {', '.join(s.streams_this_week)} this week")
     if s.squeeze:
         mul(0.75, "he has to cut a body to take two")
     if s.need_match:

@@ -3,10 +3,13 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 from .ledger import RISKY_TO_SIT, Spots, bench, drop_candidate, drop_cost, drop_note, drop_order, handcuff_for, market_value, sit_note, weeks_left
 from .model import waivers as waivers_model
+
+HOME_TZ = ZoneInfo("America/Denver")   # Dustin's clock, for the times ESPN stamps on a trade
 
 
 def slug(text: str) -> str:
@@ -339,6 +342,9 @@ def _lineup_item(lg: dict, pickups: list[dict] = ()) -> dict:
     move prints last, conditional on the add (`_pickup_move`), so the lineup is set once, after the roster moves."""
     ph = (lg.get("week_state") or {}).get("phase", "pre")
     ch = (_lineup_changes(lg) + [_pickup_move(lg, w) for w in pickups]) if ph != "final" else []
+    # a player an accepted trade brings in is on the bench the morning it processes; his move waits for that
+    arriving = {p["name"] for p in lg.get("roster") or [] if p.get("pending_trade") == "in"}
+    ch = [f"{c} (once the accepted trade processes)" if c.split(":")[0] in arriving else c for c in ch]
     if ph == "final":
         return {"kind": "lineup", "id": "lineup", "label": "Lineup", "moves": [],
                 "text": f"week {lg['week']} is over; set next week's lineup once ESPN rolls to week {lg['week'] + 1} (Tuesday)"}
@@ -426,12 +432,37 @@ def _sent_items(lg: dict) -> list[dict]:
     if lg.get("trades_closed"):
         out.append({"kind": "sent", "id": "deadline", "label": "Trades",
                     "text": f"the trade deadline passed ({(lg.get('trade_deadline_iso') or '')[:10]}); the rest of the way is waivers only"})
+    spots_said = False
     for t in lg.get("outgoing_trades") or []:
+        if t.get("accepted"):
+            give, get = ", ".join(t["give"]) or "nothing", ", ".join(t["get"]) or "nothing"
+            text = (f"your {give} for {get} with {t['rival'] or 'them'} is accepted{processes_note(t)}; this card already "
+                    f"counts it ({get} on your roster for Sunday, {give} off it)")
+            n = int(lg.get("trade_spots_after") or 0)
+            if n and not spots_said:
+                spots_said = True
+                adds = lg.get("trade_adds_after") or []
+                text += f"; it frees {n} bench spot{'s' if n != 1 else ''} when it processes, not before"
+                if adds:
+                    text += ": then add " + ", ".join(f"{a['name']} ({a['pos']}, {a['why']})" for a in adds)
+            out.append({"kind": "sent", "id": f"sent:{slug('-'.join(t['get']) or t['rival'] or 'sent')}", "label": "Accepted", "text": text})
+            continue
         left = f", {t['hours_left']:.0f}h left" if t.get("hours_left") is not None else ""
         out.append({"kind": "sent", "id": f"sent:{slug('-'.join(t['get']) or t['rival'] or 'sent')}", "label": "Already sent",
                     "text": f"your {', '.join(t['give']) or 'nothing'} for {', '.join(t['get']) or 'nothing'} is still "
                             f"waiting on {t['rival'] or 'them'}{left}"})
     return out
+
+
+def processes_note(t: dict) -> str:
+    """When ESPN executes an accepted trade: ", processes Wed 8:05 AM" in Dustin's clock (`HOME_TZ`) from `process_ts`
+    on the row, `processes_iso` (machine-local) as the fallback; empty when the clock is unknown."""
+    ms = t.get("process_ts")
+    if ms:
+        dt = datetime.fromtimestamp(ms / 1000, tz=HOME_TZ)
+        return f", processes {dt.strftime('%a %I:%M %p').replace(' 0', ' ')}"
+    iso = t.get("processes_iso")
+    return f", processes {iso}" if iso else ""
 
 
 def _pushed(lg: dict) -> list[dict]:
@@ -456,7 +487,7 @@ def _pushed(lg: dict) -> list[dict]:
 # Depth and market warnings that ride along with a trade row: the card is the whole HTML email, so a caveat that only
 # reached the detail tables would never be seen on a phone.
 TRADE_WARN_PREFIXES = ("leaves me", "leaves them", "market says I", "they start", "they have to cut a body",
-                       "he reads it as a lowball", "I get the best player")
+                       "he reads it as a lowball", "I get the best player", "they'd have to stream")
 
 
 def accept_note(t: dict) -> str:
@@ -968,7 +999,9 @@ def _detail_trades(lg: dict) -> list[str]:
     else:
         L.append("None pending.")
     if lg.get("outgoing_trades"):
-        L.append("Your open offers: " + "; ".join(f"{', '.join(t['give'])} for {', '.join(t['get'])} to {t['rival']}" for t in lg["outgoing_trades"]))
+        L.append("Your open offers: " + "; ".join(
+            f"{', '.join(t['give'])} for {', '.join(t['get'])} with {t['rival']} (accepted{processes_note(t)})" if t.get("accepted")
+            else f"{', '.join(t['give'])} for {', '.join(t['get'])} to {t['rival']}" for t in lg["outgoing_trades"]))
 
     L.append("\n## Trade candidates")
     if lg["trades"]:

@@ -234,8 +234,8 @@ def record_outcomes(packet: dict, path: Path = OUTCOMES_PATH, today: date | None
             got = [n for n in o.get("get") or [] if n in roster_names]
             kept = [n for n in o.get("give") or [] if n in roster_names]
             espn_says = (resolved.get(oid) or {}).get("status")
-            if got and not kept:
-                status = "accepted"
+            if (got and not kept) or espn_says == "accepted":
+                status = "accepted"       # the players moved, or ESPN's history has his TRADE_ACCEPT (the review period ran)
             elif got or _countered(o, incoming):
                 status = "countered"      # a different package with him went through, or his counter is on the table
             elif espn_says in ("declined", "withdrawn", "expired"):

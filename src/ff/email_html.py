@@ -319,6 +319,10 @@ def _offers_table(lg: dict, rulings: list[dict] | None = None) -> str:
             body += f'<div style="color:{MUTED if skip else TONES["warn"][1]};font-size:12px;margin-top:3px">{_e(x["ruling_note"])}</div>'
         rows.append([_badge("SKIP" if skip else report.VERDICT_WORD[t["verdict"]], "grey" if skip else VERDICT_TONE[t["verdict"]]), body])
     for t in lg.get("outgoing_trades") or []:
+        if t.get("accepted"):
+            rows.append([_badge("ACCEPTED", "good"), f"Your <b>{_e(', '.join(t['give']))}</b> for <b>{_e(', '.join(t['get']))}</b> with "
+                                                     f"{_e(t['rival'] or '?')}, accepted{_e(report.processes_note(t))}"])
+            continue
         rows.append([_badge("SENT", "grey"), f"Your <b>{_e(', '.join(t['give']))}</b> for <b>{_e(', '.join(t['get']))}</b> to {_e(t['rival'] or '?')}, waiting on them"])
     return _table(["", "Offer"], rows, "ll", 13)
 

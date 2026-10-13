@@ -680,3 +680,21 @@ def test_detail_tables_show_the_game_and_the_usage_next_to_the_projection():
     assert "| Bench WR | WR | 10.0 | 3.0 |  |  |" in roster  # no data: empty cells, nothing invented
     matchup = "\n".join(report._detail_matchup(lg))
     assert "- WR: Starter WR (vs KC 27.5 Thu)" in matchup
+
+
+def test_an_accepted_trade_row_says_when_it_processes_and_what_opens_and_the_lineup_waits_for_the_arrival():
+    lg = league(roster=[player("Starter WR", slot="WR"), player("New RB", pos="RB", mu=14.0, ros=14.0)],
+                lineup_win={"slots": {"WR": ["Starter WR"], "RB": ["New RB"]}, "p_win": 0.7, "mu": 100.0, "sd": 20.0, "bench": []},
+                outgoing_trades=[{"give": ["Old RB", "Old WR"], "get": ["New RB"], "rival": "Them", "accepted": True,
+                                  "process_ts": 1791986732413, "processes_iso": "2026-10-14T14:05"}],
+                trade_spots_after=1, trade_adds_after=[{"name": "Wire RB", "pos": "RB", "kind": "upgrade", "why": "+1.2/wk"}])
+    lg["roster"][1]["pending_trade"] = "in"
+    rows = by_id(lg)
+    row = rows["sent:new-rb"]
+    assert row["label"] == "Accepted" and "processes Wed 8:05 AM" in row["text"]
+    assert "New RB on your roster for Sunday, Old RB, Old WR off it" in row["text"]
+    assert "frees 1 bench spot when it processes, not before: then add Wire RB (RB, +1.2/wk)" in row["text"]
+    assert "New RB: bench → RB (once the accepted trade processes)" in rows["lineup"]["text"]
+    # a plain open offer is unchanged
+    lg2 = league(outgoing_trades=[{"give": ["A"], "get": ["B"], "rival": "Them", "hours_left": 5.0}])
+    assert by_id(lg2)["sent:b"]["label"] == "Already sent"
