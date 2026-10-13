@@ -324,5 +324,46 @@
    "Michael Wilson"
   ],
   "note": "the Hawk Tua deal already fixes QB and this one costs Bowers to do the same job. doing both guts the roster"
+ },
+ "L1|Kenneth Walker III+Patrick Mahomes": {
+  "date": "2026-10-13",
+  "league": "L1",
+  "rival": "CTESPN",
+  "give": [
+   "Amon-Ra St. Brown",
+   "Ashton Jeanty"
+  ],
+  "get": [
+   "Kenneth Walker III",
+   "Patrick Mahomes"
+  ],
+  "note": "same shape as the Burrow version you passed on Saturday. St. Brown and Jeanty both out the door and the title odds go the wrong way (-2.1), for a QB who sits behind Lawrence"
+ },
+ "L2|Harold Fannin Jr.+Puka Nacua": {
+  "date": "2026-10-13",
+  "league": "L2",
+  "rival": "Punts and Pints",
+  "give": [
+   "Trey McBride",
+   "Tetairoa McMillan"
+  ],
+  "get": [
+   "Puka Nacua",
+   "Harold Fannin Jr."
+  ],
+  "note": "title odds drop 3.4 points on this one and it hands over McBride, who is the best tight end in the deal by a mile. Nacua isn't worth that"
+ },
+ "L3|Bryce Young+Tetairoa McMillan": {
+  "date": "2026-10-13",
+  "league": "L3",
+  "rival": "Hawk Tua ",
+  "give": [
+   "Chris Olave"
+  ],
+  "get": [
+   "Bryce Young",
+   "Tetairoa McMillan"
+  ],
+  "note": "four mornings is enough. Bryce Young is barely a bump on Brissett and it costs Olave to get him, while the Mahomes offer and the Purdy one both fix QB without touching your WRs"
  }
 }

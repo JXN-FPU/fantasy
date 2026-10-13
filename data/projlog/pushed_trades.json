@@ -86,7 +86,7 @@
   "skip_note": "not shipping Bowers for a QB. Brissett's at 16 a game, Caleb Williams is back around week 6, and Michael Wilson never cracks my lineup, so the deal is really Bowers down to Juwan Johnson at TE."
  },
  "L3|Bryce Young+Tetairoa McMillan": {
-  "status": "open",
+  "status": "skipped",
   "since": "2026-10-10",
   "last": "2026-10-10",
   "league": "L3",
@@ -99,6 +99,8 @@
    "Tetairoa McMillan"
   ],
   "source": "math",
-  "note": null
+  "note": null,
+  "closed": "2026-10-13",
+  "skip_note": "four mornings is enough. Bryce Young is barely a bump on Brissett and it costs Olave to get him, while the Mahomes offer and the Purdy one both fix QB without touching your WRs"
  }
 }

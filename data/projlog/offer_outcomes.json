@@ -29,5 +29,39 @@
   "opened": "2026-10-07",
   "expires": "2026-10-08T14:00",
   "closed": "2026-10-09"
+ },
+ "L1|92378dd4-8208-4270-bc26-98c817ca7728": {
+  "status": "open",
+  "league": "L1",
+  "rival": "Deep Ballers",
+  "rival_team_id": 4,
+  "give": [
+   "Chris Rodriguez Jr.",
+   "Bhayshul Tuten",
+   "Jalen Coker"
+  ],
+  "get": [
+   "Chuba Hubbard"
+  ],
+  "opened": "2026-10-13",
+  "expires": "2026-10-14T17:04",
+  "expires_ts": 1791997486924,
+  "proposed_ts": 1791824686897
+ },
+ "L3|30ee433e-c20c-4f72-ad7f-61b838b14790": {
+  "status": "open",
+  "league": "L3",
+  "rival": "Down Bad",
+  "rival_team_id": 8,
+  "give": [
+   "Luther Burden III"
+  ],
+  "get": [
+   "Patrick Mahomes"
+  ],
+  "opened": "2026-10-13",
+  "expires": "2026-10-14T16:03",
+  "expires_ts": 1791993783764,
+  "proposed_ts": 1791820983731
  }
 }
