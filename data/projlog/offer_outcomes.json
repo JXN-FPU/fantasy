@@ -49,7 +49,7 @@
   "proposed_ts": 1791824686897
  },
  "L3|30ee433e-c20c-4f72-ad7f-61b838b14790": {
-  "status": "open",
+  "status": "withdrawn",
   "league": "L3",
   "rival": "Down Bad",
   "rival_team_id": 8,
@@ -62,6 +62,7 @@
   "opened": "2026-10-13",
   "expires": "2026-10-14T16:03",
   "expires_ts": 1791993783764,
-  "proposed_ts": 1791820983731
+  "proposed_ts": 1791820983731,
+  "closed": "2026-10-13"
  }
 }
