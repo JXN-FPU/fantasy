@@ -365,5 +365,59 @@
    "Tetairoa McMillan"
   ],
   "note": "four mornings is enough. Bryce Young is barely a bump on Brissett and it costs Olave to get him, while the Mahomes offer and the Purdy one both fix QB without touching your WRs"
+ },
+ "L1|Jordan Love+Nico Collins": {
+  "date": "2026-10-13",
+  "league": "L1",
+  "rival": "The fUNCtion",
+  "give": [
+   "Ashton Jeanty"
+  ],
+  "get": [
+   "Jordan Love",
+   "Nico Collins"
+  ],
+  "note": "same Jeanty as the Purdy ask, one Jeanty trade at a time. this one leaves him streaming WR and you with a QB you'd bench once Purdy lands"
+ },
+ "L2|Jalen Hurts+Javonte Williams": {
+  "date": "2026-10-13",
+  "league": "L2",
+  "rival": "SpangeBob",
+  "give": [
+   "Drake Maye",
+   "Tetairoa McMillan"
+  ],
+  "get": [
+   "Javonte Williams",
+   "Jalen Hurts"
+  ],
+  "note": "SpangeBob would be starting the wire at QB and at RB after this. nobody takes that mid-week, whatever the chart says"
+ },
+ "L3|Jaylen Warren+Joe Burrow": {
+  "date": "2026-10-13",
+  "league": "L3",
+  "rival": "BUTT MUNCH",
+  "give": [
+   "Brock Bowers"
+  ],
+  "get": [
+   "Joe Burrow",
+   "Jaylen Warren"
+  ],
+  "note": "same Bowers for a QB shape you passed on last week. Burrow's on bye this week and Caleb's a coin flip, so you'd still be streaming Sunday"
+ },
+ "L3|Jordan Love+Trey McBride": {
+  "date": "2026-10-13",
+  "league": "L3",
+  "rival": "Titieburgh Feelers",
+  "give": [
+   "Brock Bowers",
+   "Caleb Williams"
+  ],
+  "get": [
+   "Jordan Love",
+   "Trey McBride"
+  ],
+  "note": "coin flip, and McBride for Bowers is a wash once Caleb rides along. pass"
  }
 }
