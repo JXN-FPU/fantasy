@@ -59,7 +59,6 @@
     "4035538": "David Montgomery",
     "4685278": "Luther Burden III",
     "4426388": "Jameson Williams",
-    "3116165": "Chris Godwin Jr.",
     "3917315": "Kyler Murray",
     "3929645": "Juwan Johnson",
     "4036133": "T.J. Hockenson",
@@ -67,10 +66,14 @@
     "2578570": "Jacoby Brissett",
     "-16020": "Jets D/ST"
    },
-   "ir": [
-    "4431611"
-   ]
+   "ir": []
   }
  },
- "moves": {}
+ "moves": {
+  "L3|4431611": {
+   "name": "Caleb Williams",
+   "league": "L3",
+   "left": "2026-10-13"
+  }
+ }
 }
