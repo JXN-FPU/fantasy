@@ -232,7 +232,10 @@ def incoming(league: str | None = LeagueOpt, sims: int = 1500,
             mk = f"  market {t['market_get']} for {t['market_give']}" if t.get("market_give") and t.get("market_get") else ""
             rprint(f"- [bold]{t['verdict'].upper()}[/] {report.incoming_line(t)}{mk}  {'; '.join(t['why'])}")
         for t in lg["outgoing_trades"]:
-            rprint(f"- [dim]sent: your {', '.join(t['give'])} for {', '.join(t['get'])} to {t['rival']}[/]")
+            if t.get("accepted"):
+                rprint(f"- [green]accepted{report.processes_note(t)}: your {', '.join(t['give'])} for {', '.join(t['get'])} with {t['rival']}[/]")
+            else:
+                rprint(f"- [dim]sent: your {', '.join(t['give'])} for {', '.join(t['get'])} to {t['rival']}[/]")
         if not lg["incoming_trades"] and not lg["outgoing_trades"]:
             rprint("[dim]no offers pending[/]")
 

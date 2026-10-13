@@ -123,3 +123,59 @@ def test_the_history_view_says_who_closed_each_proposal_and_how():
     assert res["p1"]["status"] == "declined"
     assert "37d622ff" not in res and "w" not in res and "r" not in res
     assert trade_resolutions(HistoryLeague(), None) == {}
+
+
+# ---- an accepted trade in its review period (captured 2026-10-13: the Hubbard trade, accepted Tuesday 11:50 AM Denver,
+# processing Wednesday 8:05 AM). mPendingTransactions keeps the record under the same id with its type turned to
+# TRADE_ACCEPT, both teams ACCEPTED and processDate set; it used to be dropped as not-a-proposal, so the offer log
+# closed the deal as his decline while the ESPN app said "Accepted".
+ACCEPTED_RAW = {"pendingTransactions": [
+    {"id": "92378dd4", "type": "TRADE_ACCEPT", "status": "PENDING", "executionType": "EXECUTE", "teamId": 3, "memberId": ME,
+     "proposedDate": 1791824686897, "expirationDate": 1791997486924, "processDate": 1791986732413, "relatedTransactionId": None,
+     "scoringPeriodId": 5, "teamActions": {"3": "ACCEPTED", "4": "ACCEPTED"}, "isPending": True,
+     "items": [{"type": "TRADE", "playerId": 1, "fromTeamId": 3, "toTeamId": 4}, {"type": "TRADE", "playerId": 2, "fromTeamId": 3, "toTeamId": 4},
+               {"type": "TRADE", "playerId": 3, "fromTeamId": 3, "toTeamId": 4}, {"type": "TRADE", "playerId": 4, "fromTeamId": 4, "toTeamId": 3}]},
+]}
+
+
+class AcceptedLeague:
+    class espn_request:
+        @staticmethod
+        def league_get(params=None, headers=None):
+            return ACCEPTED_RAW
+
+
+def test_an_accepted_trade_in_its_review_period_is_still_pending_and_says_so():
+    out = pending_trades(AcceptedLeague(), 3)
+    assert len(out) == 1
+    t = out[0]
+    assert t["accepted"] is True and t["process_ts"] == 1791986732413 and t["status"] == "PENDING"
+    assert t["direction"] == "outgoing" and t["rival_team_id"] == 4 and t["give"] == [1, 2, 3] and t["get"] == [4]
+    # the rival's side of the same record: incoming, accepted, same clock
+    r = pending_trades(AcceptedLeague(), 4)[0]
+    assert r["direction"] == "incoming" and r["accepted"] is True and r["process_ts"] == 1791986732413
+    # a plain proposal carries no process clock
+    assert pending_trades(FakeLeague(), 16)[0]["accepted"] is False and pending_trades(FakeLeague(), 16)[0]["process_ts"] is None
+
+
+def test_the_history_view_reads_his_acceptance_and_it_beats_a_cancel_copy():
+    """mTransactions2 2026-10-13: a TRADE_ACCEPT under the rival's member id, relatedTransactionId the proposal, its
+    items the drop his roster needed. A cancel copy under his id in the same view (ESPN writes one on some paths)
+    must not turn the acceptance into a decline."""
+    from ff.sources.espn import trade_resolutions
+    hist = {"transactions": [
+        {"id": "f65a9f1f", "type": "TRADE_ACCEPT", "status": None, "executionType": "EXECUTE", "teamId": 9, "memberId": RIVAL9,
+         "proposedDate": 1791900332381, "relatedTransactionId": "92378dd4", "isPending": False,
+         "items": [{"type": "DROP", "playerId": -16006, "fromTeamId": 9, "toTeamId": 0}]},
+        {"id": "c9", "type": "TRADE_PROPOSAL", "executionType": "CANCEL", "status": "CANCELED", "teamId": 3, "memberId": RIVAL9,
+         "proposedDate": 1791900332381, "relatedTransactionId": "92378dd4", "isPending": True, "items": []},
+        {"id": "d9", "type": "TRADE_DECLINE", "executionType": "EXECUTE", "status": "EXECUTED", "teamId": 9, "memberId": RIVAL9,
+         "proposedDate": 1791900332381, "relatedTransactionId": "92378dd4", "isPending": False, "items": []},
+    ]}
+
+    class L(HistoryLeague):
+        class espn_request:
+            @staticmethod
+            def league_get(params=None, headers=None):
+                return hist
+    assert trade_resolutions(L(), 3)["92378dd4"] == {"status": "accepted", "by": 9, "ts": 1791900332381}

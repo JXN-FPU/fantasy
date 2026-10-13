@@ -249,7 +249,9 @@ def analyze_league(snap: dict, xw: Crosswalk, fp_index: dict, inj: dict, trendin
             break
         open_adds.append(a); used.add(a["name"])
 
-    # offers other managers sent me (and mine still open), from ESPN's pending transactions
+    # offers other managers sent me (and mine still open), from ESPN's pending transactions. A trade both sides have
+    # accepted sits in the same view until ESPN processes it (the league's review period); it is a done deal waiting
+    # on the clock, not an offer to rule on, so it rides `outgoing_trades` with `accepted` whoever proposed it.
     incoming, outgoing = [], []
     for tx in snap.get("pending_trades") or []:
         rid = tx.get("rival_team_id")
@@ -259,8 +261,10 @@ def analyze_league(snap: dict, xw: Crosswalk, fp_index: dict, inj: dict, trendin
         base = {"id": tx["id"], "rival_team_id": rid, "rival": teams.get(rid, {}).get("name"),
                 "proposed_iso": _ms_iso(tx.get("proposed_ts")), "expires_iso": _ms_iso(tx.get("expires_ts")),
                 "hours_left": _hours_left(tx.get("expires_ts"), now), "proposed_ts": tx.get("proposed_ts"),
-                "expires_ts": tx.get("expires_ts"), "unmatched_ids": unmatched}
-        if tx.get("direction") != "incoming" or rid is None:
+                "expires_ts": tx.get("expires_ts"), "unmatched_ids": unmatched,
+                "accepted": bool(tx.get("accepted")), "process_ts": tx.get("process_ts"),
+                "processes_iso": _ms_iso(tx.get("process_ts"))}
+        if tx.get("accepted") or tx.get("direction") != "incoming" or rid is None:
             outgoing.append({**base, "give": [p.name for p in give], "get": [p.name for p in get]})
             continue
         ev = evaluate(my_id, rid, give, get, by_team, slots, repl, values, limits=limits, ctx=season_ctx,

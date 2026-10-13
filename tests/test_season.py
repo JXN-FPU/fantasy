@@ -178,3 +178,30 @@ def test_scan_output_is_plain_json_even_with_numpy_odds(slots):
     text = json.dumps(out)  # no default=str: anything numpy would raise here
     back = json.loads(text)
     assert all(isinstance(c["sendable"], bool) and isinstance(c["must_try"], bool) for c in back)
+
+
+def test_a_rostered_qb_on_bye_this_week_is_still_the_qb_he_keeps(slots):
+    """Oct 13: BUTT MUNCH had Purdy and Burrow, Burrow on bye in week 6. The row asking for Purdy said "he'd start
+    Aaron Rodgers (the wire) at QB after", so the card read as if it asked a one-QB team for its only QB. The after-line
+    is his rest-of-season starter, with the bye noted; the wire is his starter only when it really is."""
+    mine = [P(1, "QB1", "QB", 17, tid=1), P(2, "QB2", "QB", 16, tid=1), P(3, "RB1", "RB", 16, tid=1), P(4, "RB2", "RB", 14, tid=1), P(5, "RB3", "RB", 12, tid=1),
+            P(6, "WR1", "WR", 14, tid=1), P(7, "WR2", "WR", 12, tid=1), P(8, "WR3", "WR", 10, tid=1), P(9, "TE", "TE", 8, tid=1), P(10, "K", "K", 8, tid=1), P(11, "D", "D/ST", 7, tid=1)]
+    burrow = P(22, "TheirQB2", "QB", 15, tid=2); burrow.bye_weeks = [5]
+    theirs = [P(21, "TheirQB", "QB", 20, tid=2), burrow, P(23, "RB1", "RB", 7, tid=2), P(24, "RB2", "RB", 6, tid=2),
+              P(25, "WR1", "WR", 14, tid=2), P(26, "WR2", "WR", 12, tid=2), P(27, "WR3", "WR", 11, tid=2), P(28, "TE", "TE", 9, tid=2), P(29, "K", "K", 8, tid=2), P(30, "D", "D/ST", 7, tid=2)]
+    repl = {"QB": 14, "RB": 7, "WR": 8, "TE": 5, "K": 6, "D/ST": 5}
+    ctx = SeasonCtx.build(5, 9, fas=[P(90, "Wire QB", "QB", 12, tid=None)])
+    out = scan(1, {1: mine, 2: theirs}, slots, repl, {2: {"name": "R", "wins": 2, "losses": 2, "trades": 1, "acquisitions": 4}}, values={},
+               ctx=ctx, max_per_rival=10)
+    qb_asks = [c for c in out if "TheirQB" in c["get"] and not any(g.startswith("QB") for g in c["give"])]
+    assert qb_asks
+    for c in qb_asks:
+        row = next(r for r in c["rival_after"] if r["pos"] == "QB")
+        assert [s["name"] for s in row["starters"]] == ["TheirQB2"] and not row["starters"][0]["wire"]
+        assert row["starters"][0]["idle"] == "on bye this week"
+        assert "he'd start TheirQB2 (on bye this week) at QB after" in c["after_line"]
+    # the one-week view still says who plays Sunday
+    from ff.model.season import starters_ros, starters_this_week
+    left = [p for p in theirs if p.name != "TheirQB"]
+    assert [p.name for p in starters_this_week(left, slots, ctx, "QB")] == ["Wire QB"]
+    assert [p.name for p in starters_ros(left, slots, ctx, "QB")] == ["TheirQB2"]

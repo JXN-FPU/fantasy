@@ -7,7 +7,7 @@ from itertools import combinations
 from . import acceptance as acc
 from .lineup import optimize
 from .projections import PlayerProj
-from .season import SeasonCtx, greedy_lineup, season_value, starters_this_week, weekly_values
+from .season import SeasonCtx, greedy_lineup, idle_this_week, season_value, starters_ros, weekly_values
 
 POS_ORDER = ("QB", "RB", "WR", "TE", "K", "D/ST")
 # Weeks the scan assumes when nobody tells it the season (tests, a bare snapshot).
@@ -237,13 +237,14 @@ def weakest_slot(roster: list[PlayerProj], slots: dict[str, int], repl: dict[str
 
 
 def rival_after(new_theirs: list[PlayerProj], get: list[PlayerProj], slots: dict[str, int], ctx: SeasonCtx) -> list[dict]:
-    """What he is left with at each position I ask for: who starts there next week, and whether that body is the wire.
-    The row prints it so the paste cannot tell a one-QB team it is set at QB."""
+    """What he is left with at each position I ask for: who starts there the rest of the season, whether that body is
+    the wire, and `idle` when he gives nothing this week (a bye, an injury) so the row can say the wire fills in once
+    without calling the streamer his starter. The row prints it so the paste cannot tell a one-QB team it is set at QB."""
     out = []
     for pos in dict.fromkeys(p.pos for p in get):
-        st = starters_this_week(new_theirs, slots, ctx, pos)
+        st = starters_ros(new_theirs, slots, ctx, pos)
         out.append({"pos": pos, "starters": [{"name": p.name, "wire": p.fantasy_team_id is None,
-                                              "ppg": round(acc.his_view(p), 1)} for p in st]})
+                                              "ppg": round(acc.his_view(p), 1), "idle": idle_this_week(p, ctx)} for p in st]})
     return out
 
 
@@ -254,7 +255,8 @@ def _after_line(rows: list[dict]) -> str | None:
             parts.append(f"nobody at {r['pos']}")
             continue
         if r["pos"] in NO_FLEX_COVER or any(s["wire"] for s in r["starters"]):
-            who = ", ".join(f"{s['name']}{' (the wire)' if s['wire'] else ''}" for s in r["starters"])
+            who = ", ".join(f"{s['name']}{' (the wire)' if s['wire'] else ''}{' (' + s['idle'] + ')' if s.get('idle') else ''}"
+                            for s in r["starters"])
             parts.append(f"{who} at {r['pos']}")
     return ("he'd start " + "; ".join(parts) + " after") if parts else None
 

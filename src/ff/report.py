@@ -3,10 +3,13 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 from .ledger import RISKY_TO_SIT, Spots, bench, drop_candidate, drop_cost, drop_note, drop_order, handcuff_for, market_value, sit_note, weeks_left
 from .model import waivers as waivers_model
+
+HOME_TZ = ZoneInfo("America/Denver")   # Dustin's clock, for the times ESPN stamps on a trade
 
 
 def slug(text: str) -> str:
@@ -427,11 +430,27 @@ def _sent_items(lg: dict) -> list[dict]:
         out.append({"kind": "sent", "id": "deadline", "label": "Trades",
                     "text": f"the trade deadline passed ({(lg.get('trade_deadline_iso') or '')[:10]}); the rest of the way is waivers only"})
     for t in lg.get("outgoing_trades") or []:
+        if t.get("accepted"):
+            out.append({"kind": "sent", "id": f"sent:{slug('-'.join(t['get']) or t['rival'] or 'sent')}", "label": "Accepted",
+                        "text": f"your {', '.join(t['give']) or 'nothing'} for {', '.join(t['get']) or 'nothing'} with "
+                                f"{t['rival'] or 'them'} is accepted{processes_note(t)}; the rosters below are from before it"})
+            continue
         left = f", {t['hours_left']:.0f}h left" if t.get("hours_left") is not None else ""
         out.append({"kind": "sent", "id": f"sent:{slug('-'.join(t['get']) or t['rival'] or 'sent')}", "label": "Already sent",
                     "text": f"your {', '.join(t['give']) or 'nothing'} for {', '.join(t['get']) or 'nothing'} is still "
                             f"waiting on {t['rival'] or 'them'}{left}"})
     return out
+
+
+def processes_note(t: dict) -> str:
+    """When ESPN executes an accepted trade: ", processes Wed 8:05 AM" in Dustin's clock (`HOME_TZ`) from `process_ts`
+    on the row, `processes_iso` (machine-local) as the fallback; empty when the clock is unknown."""
+    ms = t.get("process_ts")
+    if ms:
+        dt = datetime.fromtimestamp(ms / 1000, tz=HOME_TZ)
+        return f", processes {dt.strftime('%a %I:%M %p').replace(' 0', ' ')}"
+    iso = t.get("processes_iso")
+    return f", processes {iso}" if iso else ""
 
 
 def _pushed(lg: dict) -> list[dict]:
@@ -968,7 +987,9 @@ def _detail_trades(lg: dict) -> list[str]:
     else:
         L.append("None pending.")
     if lg.get("outgoing_trades"):
-        L.append("Your open offers: " + "; ".join(f"{', '.join(t['give'])} for {', '.join(t['get'])} to {t['rival']}" for t in lg["outgoing_trades"]))
+        L.append("Your open offers: " + "; ".join(
+            f"{', '.join(t['give'])} for {', '.join(t['get'])} with {t['rival']} (accepted{processes_note(t)})" if t.get("accepted")
+            else f"{', '.join(t['give'])} for {', '.join(t['get'])} to {t['rival']}" for t in lg["outgoing_trades"]))
 
     L.append("\n## Trade candidates")
     if lg["trades"]:
