@@ -7,6 +7,7 @@ What the model does with priority today is wording: `rank_free_agents` tags each
 status, the packet carries `waiver_rank` and a `faab_remaining` of None, and the checklist row says `claim (waivers,
 you are priority #N)` or `add`. Nothing prices the cost of spending priority #N; that is TODO D3, not a bug here.
 """
+import re
 from types import SimpleNamespace
 
 from ff import report
@@ -221,7 +222,7 @@ def test_a_priority_league_carries_the_rank_and_no_faab_through_packet_markdown_
     for r in rows:
         if r["kind"] in ("waiver", "waiver_up"):
             assert "$" not in r["text"]
-            assert r["text"].startswith("claim (waivers, you are priority #6) ") or r["text"].startswith("add ")
+            assert re.match(r"claim \(waivers, you are priority #6(, lands [^)]+)?\) ", r["text"]) or r["text"].startswith("add ")
             assert ("of future claims" in r["text"]) == r["text"].startswith("claim")  # the priority is priced on a claim only
     packet = {"version": 3, "generated": "2026-09-10T07:00:00", "season": 2026,
               "shared": {"injury_watchlist": [], "exposure": {}, "trending_adds": [], "usage_error": None, "unmatched_ids": []},

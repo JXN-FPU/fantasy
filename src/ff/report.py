@@ -146,8 +146,22 @@ def trade_tag(t: dict) -> str:
 VERDICT_WORD = {"accept": "ACCEPT", "decline": "DECLINE", "counter": "COUNTER"}
 
 
+def executes_note(dl: dict, lead: str) -> str:
+    """"; if he accepts today it executes Wed 12:05 PM" from the league's deadlines block (the trade review period),
+    with the kickoff caveat when that clock is past the next game: a player whose game has started by then is
+    locked and moves for next week only. Empty without a review period."""
+    w = dl.get("offer_executes_word")
+    if not w:
+        return ""
+    out = f"; {lead} {w}"
+    if dl.get("offer_after_kickoff"):
+        out += f", after the {dl.get('next_kickoff_word') or 'next'} kickoff: a player whose game has started by then is locked until next week"
+    return out
+
+
 def incoming_line(t: dict) -> str:
-    """One sentence on an offer someone sent me: what moves, what it does for each side, when it expires."""
+    """One sentence on an offer someone sent me: what moves, what it does for each side, when it expires, and when
+    it executes if accepted now (the review period)."""
     td = f", title odds {t['my_title_delta']:+.1f}" if t.get("my_title_delta") is not None else ""
     left = f"; expires in {t['hours_left']:.0f}h" if t.get("hours_left") is not None else ""
     cut = ""
@@ -156,8 +170,13 @@ def incoming_line(t: dict) -> str:
     counter = ""
     if t.get("verdict") == "counter" and t.get("counter"):
         counter = f"; counter with your {', '.join(t['counter']['give'])} for {', '.join(t['counter']['get'])} ({t['counter']['my_delta_ppw']:+.1f} for you, fair on his chart)"
+    ex = ""
+    if t.get("executes"):
+        ex = f"; accept now and it executes {t['executes']}"
+        if t.get("executes_after_kickoff"):
+            ex += ", after the next kickoff: a player whose game has started by then is locked until next week"
     return (f"{t['rival']} offers {', '.join(t['get']) or 'nothing'} for your {', '.join(t['give']) or 'nothing'}: "
-            f"{t['my_delta_ppw']:+.1f} pts/wk for you, {t['their_delta_ppw']:+.1f} for them{td}{left}{cut}{counter}")
+            f"{t['my_delta_ppw']:+.1f} pts/wk for you, {t['their_delta_ppw']:+.1f} for them{td}{left}{cut}{counter}{ex}")
 
 
 # Slots the flex cannot cover, so the last healthy body at the position is the whole slot.
@@ -206,11 +225,11 @@ def _cover_items(lg: dict, spots: Spots, added: set[str]) -> list[dict]:
         pool = [w for w in lg["waivers"] if w["pos"] == pos and w["name"] not in added]
         fa = next((w for w in pool if not w.get("on_waivers")), pool[0] if pool else None)
         risk = "on bye" if who["bye"] else f"{who['p_zero']:.0%} to sit"
-        _, suffix = spots.take(adding=pos)
+        _, suffix = spots.take(adding=pos, lands_ts=(fa or {}).get("lands_ts"))
         if fa is None:
             plan = "grab a startable one off the wire before kickoff"
         elif fa.get("on_waivers"):
-            plan = f"{_add_verb(lg, fa)} {fa['name']} ({fa['team']}) now, nobody at {pos} is a free agent and the claim lands on waiver day"
+            plan = f"{_add_verb(lg, fa)} {fa['name']} ({fa['team']}) now, nobody at {pos} is a free agent and the claim lands {fa.get('lands') or 'on waiver day'}"
         else:
             plan = f"add {fa['name']} ({fa['team']}) before kickoff"
         if fa is not None:
@@ -226,12 +245,15 @@ def _add_verb(lg: dict, w: dict) -> str:
     if w.get("on_waivers"):
         pri = lg.get("waiver_rank")
         faab = lg.get("faab_remaining") is not None
-        return "claim" + (f" (waivers, bid ${w['bid']})" if faab and w.get("bid") else (f" (waivers, you are priority #{pri})" if pri else " (waivers)"))
+        lands = f", lands {w['lands']}" if w.get("lands") else ""
+        return "claim" + (f" (waivers, bid ${w['bid']}{lands})" if faab and w.get("bid") else (f" (waivers, you are priority #{pri}{lands})" if pri else f" (waivers{lands})"))
     return "add"
 
 
 def _claim_note(lg: dict, w: dict) -> str:
-    return " (he is on waivers, so the claim lands on waiver day)" if w.get("on_waivers") else ""
+    if not w.get("on_waivers"):
+        return ""
+    return f" (he is on waivers, so the claim lands {w['lands']})" if w.get("lands") else " (he is on waivers, so the claim lands on waiver day)"
 
 
 INJURY_LABEL = {"ir": "IR", "hold": "Holding", "drop": "Drop", "trade": "Hurt (trade)", "activate": "Activate"}
@@ -365,7 +387,7 @@ def _waiver_items(lg: dict, spots: Spots, added: set[str]) -> list[dict]:
     ups = [w for w in lg["waivers"] if not w["streamer"] and w["delta_over_starter"] >= waivers_model.CLAIM_WORTHY_PPW and w not in starts and w["name"] not in added]
     out = []
     for w in starts[:1]:
-        _, suffix = spots.take(adding=w["pos"])
+        _, suffix = spots.take(adding=w["pos"], lands_ts=w.get("lands_ts"))
         added.add(w["name"])
         nxt = next((x for x in starts if x is not w), None)
         fallback = f"; if he is gone, {nxt['name']} ({nxt['pos']}, +{nxt['delta_week']:.0f} this week)" if nxt else ""
@@ -374,7 +396,7 @@ def _waiver_items(lg: dict, spots: Spots, added: set[str]) -> list[dict]:
                             f"{due_note(w.get('kickoff_day'))}{_priority_note(lg, w)}{suffix}{fallback}",
                     "pickup": None if w.get("on_waivers") else w})
     for w in ups[:1]:
-        _, suffix = spots.take(adding=w["pos"])
+        _, suffix = spots.take(adding=w["pos"], lands_ts=w.get("lands_ts"))
         added.add(w["name"])
         nxt = next((x for x in ups if x is not w), None)
         fallback = f"; if he is gone, {nxt['name']} ({nxt['pos']}, +{nxt['delta_over_starter']:.1f}/wk)" if nxt else ""
@@ -425,9 +447,11 @@ def _open_spot_items(lg: dict, spots: Spots, added: set[str]) -> list[dict]:
     return out
 
 
-def _sent_items(lg: dict) -> list[dict]:
-    """The deadline, once it has passed, and the offers I already sent. Those are the reason half the "why didn't it
-    know that" moments happen: without them the card re-proposes a deal sitting in the rival's inbox with a day left."""
+def _sent_items(lg: dict, spots: Spots | None = None) -> list[dict]:
+    """The deadline, once it has passed, the trades accepted and waiting on ESPN's clock, and the offers I already
+    sent. Those are the reason half the "why didn't it know that" moments happen: without them the card re-proposes
+    a deal sitting in the rival's inbox with a day left. `spots` is the ledger after the rows above: the spots an
+    accepted trade frees are listed less the ones a claim landing after it already took."""
     out = []
     if lg.get("trades_closed"):
         out.append({"kind": "sent", "id": "deadline", "label": "Trades",
@@ -438,11 +462,18 @@ def _sent_items(lg: dict) -> list[dict]:
             give, get = ", ".join(t["give"]) or "nothing", ", ".join(t["get"]) or "nothing"
             text = (f"your {give} for {get} with {t['rival'] or 'them'} is accepted{processes_note(t)}; this card already "
                     f"counts it ({get} on your roster for Sunday, {give} off it)")
-            n = int(lg.get("trade_spots_after") or 0)
-            if n and not spots_said:
+            n_all = int(lg.get("trade_spots_after") or 0)
+            n = spots.after_open if spots is not None else n_all
+            if n_all and not spots_said:
                 spots_said = True
-                adds = lg.get("trade_adds_after") or []
-                text += f"; it frees {n} bench spot{'s' if n != 1 else ''} when it processes, not before"
+                adds = (lg.get("trade_adds_after") or [])[:n]
+                taken = n_all - n
+                text += f"; it frees {n_all} bench spot{'s' if n_all != 1 else ''} when it processes, not before"
+                if taken:
+                    text += f" ({taken} of them {'goes' if taken == 1 else 'go'} to the claim above, which lands after it)"
+                dl = lg.get("deadlines") or {}
+                if dl.get("waiver_run_ts") and t.get("process_ts") and dl["waiver_run_ts"] < t["process_ts"]:
+                    text += f"; the waiver run ({dl.get('waiver_run_word')}) comes first, so a claim placed today still needs a drop"
                 if adds:
                     text += ": then add " + ", ".join(f"{a['name']} ({a['pos']}, {a['why']})" for a in adds)
             out.append({"kind": "sent", "id": f"sent:{slug('-'.join(t['get']) or t['rival'] or 'sent')}", "label": "Accepted", "text": text})
@@ -497,7 +528,7 @@ def accept_note(t: dict) -> str:
     return word + (f", p(accept) {t['p_accept']:.2f}" if t.get("p_accept") is not None else "")
 
 
-def _trade_item(t: dict, spots: Spots, push: bool) -> dict:
+def _trade_item(t: dict, spots: Spots, push: bool, lg: dict | None = None) -> dict:
     """One package to go send: the offer, what it does for each side, the cut ESPN's position cap forces in the trade
     screen (without it the paste goes out and the screen answers "Too many players with default position WR"), what
     he is left with where I ask (so the paste cannot tell a one-QB team it is set at QB), the fallback, the push."""
@@ -511,6 +542,7 @@ def _trade_item(t: dict, spots: Spots, push: bool) -> dict:
         text += f"; {t['after_line']}"
     if t.get("fallback"):
         text += f"; {t['fallback']['text']}"
+    text += executes_note((lg or {}).get("deadlines") or {}, "if he accepts today it executes")
     if push:
         text += " " + push_line(t)
     thin_after = [r["pos"] for r in t.get("rival_after") or [] if any(st["wire"] for st in r["starters"]) or not r["starters"]]
@@ -524,7 +556,7 @@ def _trade_items(lg: dict, spots: Spots, pushed: list[dict]) -> list[dict]:
     needs more. No "reach" row: an offer only he would decline is not a thing to do today, and printing one anyway
     taught the card to nag about packages nobody takes."""
     worth = pushed + [t for t in lg["trades"] if sendable(t) and t not in pushed][:max(TRADE_ROWS - len(pushed), 0)]
-    return [_trade_item(t, spots, bool(t.get("pushed") or t.get("must_try"))) for t in worth]
+    return [_trade_item(t, spots, bool(t.get("pushed") or t.get("must_try")), lg) for t in worth]
 
 
 def _ledger(lg: dict) -> Spots:
@@ -568,7 +600,7 @@ def todos(lg: dict) -> list[dict]:
     out += [i for i in inj if i["verdict"] == "drop"]
     out += _open_spot_items(lg, spots, added)
     out += [_lineup_item(lg, [i["pickup"] for i in wv if i.get("pickup")])]
-    out += _sent_items(lg)
+    out += _sent_items(lg, spots)
     out += _trade_items(lg, spots, _pushed(lg))
     out += [i for i in inj if i["verdict"] == "trade"]
     out += [i for i in inj if i["kind"] == "hold"]
@@ -942,11 +974,23 @@ def playoff_weight_note(lg: dict) -> str:
     return f" · playoff {span} weighted ×{w:.1f}"
 
 
+def clocks_line(lg: dict) -> str:
+    """" · waivers run Wed 1:00 AM · a trade executes 24h after acceptance": the league's clocks from the deadlines
+    block, for the header of both renderers. Empty when the packet predates the block."""
+    dl = lg.get("deadlines") or {}
+    parts = []
+    if dl.get("waiver_run_word"):
+        parts.append(f"waivers run {dl['waiver_run_word']}")
+    if dl.get("trade_review_hours") is not None:
+        parts.append(f"a trade executes {dl['trade_review_hours']}h after acceptance")
+    return "".join(f" · {p}" for p in parts)
+
+
 def _detail_matchup(lg: dict) -> list[str]:
     """The league header, the odds line, the matchup and the recommended lineup."""
     L = [f"\n---\n# {lg['league_name']} (`{lg['name']}`) — Week {lg['week']}"]
     acq = f"FAAB left ${lg['faab_remaining']}" if lg.get("faab_remaining") is not None else f"waiver priority #{lg.get('waiver_rank')}"
-    L.append(f"Record {lg['my_record']} · {acq} · weeks remaining {lg['weeks_remaining']}  ")
+    L.append(f"Record {lg['my_record']} · {acq} · weeks remaining {lg['weeks_remaining']}{clocks_line(lg)}  ")
     me = lg["odds"].get(str(lg["my_team_id"])) or {}
     if me:
         L.append(f"Playoff odds **{me['playoff_pct']}%** · title odds **{me['title_pct']}%** · expected wins {me['exp_wins']}{playoff_weight_note(lg)}")

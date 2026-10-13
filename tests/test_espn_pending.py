@@ -179,3 +179,36 @@ def test_the_history_view_reads_his_acceptance_and_it_beats_a_cancel_copy():
             def league_get(params=None, headers=None):
                 return hist
     assert trade_resolutions(L(), 3)["92378dd4"] == {"status": "accepted", "by": 9, "ts": 1791900332381}
+
+
+def test_the_pending_view_carries_espns_own_waiver_run_and_the_history_the_last_drop_of_each_player():
+    """2026-10-13: every pending claim carried processDate = Wednesday 03:00 ET, the run itself. The drops in the
+    history are the clock a dropped player's waiver period runs from (a cancelled claim's drop never happened)."""
+    from ff.sources.espn import recent_drops, waiver_run_ts
+    pend = {"pendingTransactions": [
+        {"id": "w1", "type": "WAIVER", "status": "PENDING", "processDate": 1792047600000, "proposedDate": 1791983040000, "items": [{"type": "ADD", "playerId": 1}]},
+        {"id": "w2", "type": "WAIVER", "status": "PENDING", "processDate": 1792134000000, "items": []},
+        {"id": "t", "type": "TRADE_PROPOSAL", "status": "PENDING", "processDate": 1791986732413, "items": []},
+    ]}
+    hist = {"transactions": [
+        {"id": "r1", "type": "ROSTER", "status": "EXECUTED", "proposedDate": 1791906884961, "items": [{"type": "DROP", "playerId": 4429160}, {"type": "ADD", "playerId": 7}]},
+        {"id": "r2", "type": "ROSTER", "status": "EXECUTED", "proposedDate": 1791800000000, "processDate": 1791810000000, "items": [{"type": "DROP", "playerId": 4429160}]},
+        {"id": "ta", "type": "TRADE_ACCEPT", "status": None, "proposedDate": 1791900332381, "items": [{"type": "DROP", "playerId": -16006}]},
+        {"id": "c", "type": "WAIVER", "status": "CANCELED", "executionType": "CANCEL", "proposedDate": 1791950000000, "items": [{"type": "DROP", "playerId": 5}]},
+        {"id": "p", "type": "WAIVER", "status": "PENDING", "proposedDate": 1791960000000, "items": [{"type": "DROP", "playerId": 6}]},
+    ]}
+
+    class L:
+        class espn_request:
+            @staticmethod
+            def league_get(params=None, headers=None):
+                return pend if params == {"view": "mPendingTransactions"} else hist
+    assert waiver_run_ts(L()) == 1792047600000
+    assert recent_drops(L()) == {"4429160": 1791906884961, "-16006": 1791900332381}
+
+    class Empty:
+        class espn_request:
+            @staticmethod
+            def league_get(params=None, headers=None):
+                return {}
+    assert waiver_run_ts(Empty()) is None and recent_drops(Empty()) == {}

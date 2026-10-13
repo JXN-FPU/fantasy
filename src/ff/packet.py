@@ -8,6 +8,7 @@ from datetime import UTC, date, datetime
 from .cache import HOUR, cached_json
 from .config import PACKET_DIR, LeagueRef, env, leagues
 from .ids import Crosswalk
+from .model import deadlines
 from .model import usage as usage_mod
 from .model.clock import apply_clock, kickoff_day, week_state
 from .model.injuries import decide as decide_injuries
@@ -227,6 +228,16 @@ def analyze_league(snap: dict, xw: Crosswalk, fp_index: dict, inj: dict, trendin
                                week_lineup=win_lu.assignment)
     for w in waivers:
         w["kickoff_day"] = kickoff_day((lines or {}).get(w["team"]))  # a Thursday pickup has to be in before Thursday
+    # the league's clocks: when a claim placed now lands, when an offer accepted now executes, when the trade processes
+    dl = deadlines.build(now_dt, s, lines or {}, snap.get("waiver_run_ts"), pending_moves)
+    drops_ts = snap.get("recent_drops") or {}
+    for w in waivers:
+        if not w.get("on_waivers"):
+            continue
+        lands = deadlines.clears_at(drops_ts.get(str(w.get("espn_id"))), s.get("waiver_hours"), s.get("waiver_process_days"), now_dt)
+        if lands is None and dl.get("waiver_run_ts"):
+            lands = datetime.fromtimestamp(dl["waiver_run_ts"] / 1000, UTC)
+        w["lands"], w["lands_ts"] = deadlines.word(lands), deadlines.ms(lands)
     my_rbs = [p for p in my_lineup.get("RB", [])]
     cuffs = handcuffs(my_rbs, pool)
 
@@ -315,7 +326,8 @@ def analyze_league(snap: dict, xw: Crosswalk, fp_index: dict, inj: dict, trendin
                 "hours_left": _hours_left(tx.get("expires_ts"), now), "proposed_ts": tx.get("proposed_ts"),
                 "expires_ts": tx.get("expires_ts"), "unmatched_ids": unmatched,
                 "accepted": bool(tx.get("accepted")), "process_ts": tx.get("process_ts"),
-                "processes_iso": _ms_iso(tx.get("process_ts"))}
+                "processes_iso": _ms_iso(tx.get("process_ts")),
+                "executes": dl.get("offer_executes_word"), "executes_after_kickoff": dl.get("offer_after_kickoff")}
         if tx.get("accepted") or tx.get("direction") != "incoming" or rid is None:
             outgoing.append({**base, "give": [p.name for p in give], "get": [p.name for p in get]})
             continue
@@ -346,7 +358,8 @@ def analyze_league(snap: dict, xw: Crosswalk, fp_index: dict, inj: dict, trendin
     return {
         "name": snap["ref"]["name"], "league_name": s["name"], "week": week, "weeks_remaining": weeks_remaining,
         "settings": {k: s.get(k) for k in ("team_count", "lineup_slots", "faab", "faab_budget", "playoff_team_count", "playoff_weeks", "ppr",
-                                           "reg_season_weeks", "ir_slots", "bench_slots", "trade_deadline_ms", "position_limits", "waiver_order")},
+                                           "reg_season_weeks", "ir_slots", "bench_slots", "trade_deadline_ms", "position_limits", "waiver_order",
+                                           "waiver_hours", "waiver_process_days", "trade_revision_hours", "veto_votes")},
         "trade_deadline_iso": _ms_iso(deadline_ms), "trades_closed": trades_closed,
         "playoff_weight": playoff_weight,
         "my_team_id": my_id, "my_record": f"{teams[my_id]['wins']}-{teams[my_id]['losses']}" if my_id in teams else None,
@@ -362,6 +375,7 @@ def analyze_league(snap: dict, xw: Crosswalk, fp_index: dict, inj: dict, trendin
         "waivers": waivers, "handcuffs": cuffs, "trades": trades, "injuries": injuries,
         "open_spots": open_spots, "open_spot_adds": open_adds, "ir_events": ir_events,
         "pending_moves": pending_moves, "trade_spots_after": spots_after, "trade_adds_after": after_adds,
+        "deadlines": dl, "clocks_error": snap.get("clocks_error"),
         "incoming_trades": incoming, "outgoing_trades": outgoing,
         "pending_trades_error": snap.get("pending_trades_error"),
         "trade_resolutions": snap.get("trade_resolutions") or {}, "trade_resolutions_error": snap.get("trade_resolutions_error"),

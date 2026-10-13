@@ -97,7 +97,46 @@ def settings(ref: LeagueRef, league: League) -> LeagueSettings:
         ppr=ppr,
         position_limits=position_limits(raw["rosterSettings"]),
         waiver_order=waiver_order(raw.get("acquisitionSettings") or {}),
+        waiver_hours=_int_or_none((raw.get("acquisitionSettings") or {}).get("waiverHours")),
+        waiver_process_days=list((raw.get("acquisitionSettings") or {}).get("waiverProcessDays") or []),
+        waiver_process_hour=_int_or_none((raw.get("acquisitionSettings") or {}).get("waiverProcessHour")),
+        trade_revision_hours=_int_or_none((raw.get("tradeSettings") or {}).get("revisionHours")),
+        veto_votes=_int_or_none((raw.get("tradeSettings") or {}).get("vetoVotesRequired")),
     )
+
+
+def _int_or_none(v) -> int | None:
+    try:
+        return int(v) if v is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def waiver_run_ts(league: League) -> int | None:
+    """When ESPN runs waivers next, in ms: the `processDate` it stamps on every pending claim in the league
+    (probed 2026-10-13: 03:00 ET the next processing day, in all three leagues). None when nobody has a claim in."""
+    raw = league.espn_request.league_get(params={"view": "mPendingTransactions"})
+    stamps = [tx.get("processDate") for tx in raw.get("pendingTransactions") or []
+              if tx.get("type") == "WAIVER" and tx.get("processDate")]
+    return min(stamps) if stamps else None
+
+
+def recent_drops(league: League) -> dict[str, int]:
+    """{player id: ms} of the last time each player was dropped (a roster move, a processed claim's drop or a trade
+    screen cut), from the `mTransactions2` history view: the clock a dropped player's waiver period runs from."""
+    raw = league.espn_request.league_get(params={"view": "mTransactions2"})
+    out: dict[str, int] = {}
+    for tx in raw.get("transactions") or []:
+        if tx.get("status") not in ("EXECUTED", None) or tx.get("executionType") == "CANCEL":
+            continue
+        ts = tx.get("processDate") or tx.get("proposedDate")
+        if not ts:
+            continue
+        for item in tx.get("items") or []:
+            if item.get("type") == "DROP" and item.get("playerId") is not None:
+                pid = str(item["playerId"])
+                out[pid] = max(out.get(pid, 0), int(ts))
+    return out
 
 
 @dataclass
@@ -342,6 +381,12 @@ def snapshot(ref: LeagueRef, league: League, week: int) -> dict[str, Any]:
         resolutions = trade_resolutions(league, me.team_id if me else None)
     except Exception as exc:
         resolutions_err = f"{type(exc).__name__}: {exc}"
+    # The league's clocks (`model/deadlines.py`): ESPN's stamp for the next waiver run and each player's last drop.
+    run_ts, drops, clocks_err = None, {}, None
+    try:
+        run_ts, drops = waiver_run_ts(league), recent_drops(league)
+    except Exception as exc:
+        clocks_err = f"{type(exc).__name__}: {exc}"
     return {
         "ref": asdict(ref), "week": week, "settings": asdict(settings(ref, league)),
         "my_team_id": me.team_id if me else None,
@@ -351,4 +396,5 @@ def snapshot(ref: LeagueRef, league: League, week: int) -> dict[str, Any]:
         "faab_bids": bids,
         "pending_trades": pending, "pending_trades_error": pending_err,
         "trade_resolutions": resolutions, "trade_resolutions_error": resolutions_err,
+        "waiver_run_ts": run_ts, "recent_drops": drops, "clocks_error": clocks_err,
     }

@@ -126,6 +126,10 @@ class Spots:
         self.pos_of = {p["name"]: p["pos"] for p in lg["roster"]}
         self.counts = Counter(self.pos_of.values())
         self.caps = (lg.get("settings") or {}).get("position_limits") or {}
+        # Spots an accepted trade frees when it processes (`trade_spots_after`): a claim that lands after that clock
+        # can have one instead of a drop; a claim that lands before it (the waiver run is 3 AM, the trade 8 AM) cannot.
+        self.after_open = max(int(lg.get("trade_spots_after") or 0), 0)
+        self.after_ts = max((int(m.get("process_ts") or 0) for m in lg.get("pending_moves") or []), default=0) or None
 
     def note(self, add_pos: str | None = None, drop: str | None = None) -> None:
         """A row moved a body on or off the roster; keep the position counts honest for `cut`."""
@@ -135,13 +139,17 @@ class Spots:
             self.gone.add(drop)
             self.counts[self.pos_of[drop]] -= 1
 
-    def take(self, for_whom: str | None = None, adding: str | None = None) -> tuple[str | None, str]:
+    def take(self, for_whom: str | None = None, adding: str | None = None, lands_ts: int | None = None) -> tuple[str | None, str]:
         """(drop name or None, suffix for the row text). Uses an open spot before naming a drop. `adding` is the
-        position of the player the spot is for."""
+        position of the player the spot is for; `lands_ts` is when the add actually lands (a claim's waiver run), so
+        a claim that lands after an accepted trade processes can take the spot the trade frees."""
         self.note(add_pos=adding)
         if self.open > 0:
             self.open -= 1
             return None, " (there is an open bench spot)"
+        if lands_ts and self.after_ts and self.after_open > 0 and lands_ts >= self.after_ts:
+            self.after_open -= 1
+            return None, " (it lands after the accepted trade processes, so the spot the trade frees covers it; no drop)"
         excl = self.reserved | set(self.dropped) | ({for_whom} if for_whom else set())
         order = drop_order(self.lg, excl)
         if not order:

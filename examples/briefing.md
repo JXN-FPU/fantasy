@@ -26,7 +26,7 @@ _Full detail below._
 
 ---
 # Demo League (`demo`) — Week 5
-Record 4-0 · FAAB left $79 · weeks remaining 12  
+Record 4-0 · FAAB left $79 · weeks remaining 12 · waivers run Wed 1:00 AM  
 Playoff odds **97.6%** · title odds **21.4%** · expected wins 10.01 · playoff weeks 15-16 weighted ×1.5
 
 ## Matchup vs Bye Week Blues (their proj 72.3 ± 16.0)

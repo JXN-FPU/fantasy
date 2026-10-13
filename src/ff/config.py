@@ -86,3 +86,11 @@ class LeagueSettings:
     # "rolling" (a successful claim sends you to the back of the waiver order), "reset" (ESPN resets it to reverse
     # standings every week) or None when the snapshot predates the field. Prices what a claim costs in priority.
     waiver_order: str | None = None
+    # The league's clocks (`model/deadlines.py`): hours a dropped player sits on waivers, the days ESPN processes
+    # claims (its hour is a house constant; the settings' `waiverProcessHour` is not the run), the trade review
+    # period in hours (an accepted trade executes that long after the acceptance) and the veto count.
+    waiver_hours: int | None = None
+    waiver_process_days: list[str] = field(default_factory=list)
+    waiver_process_hour: int | None = None
+    trade_revision_hours: int | None = None
+    veto_votes: int | None = None

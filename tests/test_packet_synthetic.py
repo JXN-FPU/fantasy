@@ -225,3 +225,27 @@ def test_an_accepted_trade_is_applied_to_the_rosters_before_it_processes(monkeyp
     # the rival's side: he has my two, not his one
     rival_rows = [p for p in snap["roster"] if p["fantasy_team_id"] == 3]
     assert rival_rows and blk["rival_needs"]  # his roster still prices (no crash on the moved bodies)
+
+
+def test_the_packet_carries_the_leagues_clocks_and_a_claim_says_when_it_lands(monkeypatch):
+    monkeypatch.setattr("ff.packet.fantasycalc.by_espn_id", lambda **kw: {})
+    snap = make_snapshot()
+    snap["settings"].update({"waiver_hours": 24, "waiver_process_days": ["MONDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"],
+                             "trade_revision_hours": 24, "veto_votes": 4})
+    claimable = next(r for r in snap["free_agents"] if r["pos"] in ("RB", "WR"))
+    claimable["waiver_status"] = "WAIVERS"
+    now = datetime(2026, 9, 15, 14, 0, tzinfo=UTC)   # a Tuesday
+    blk = analyze_league(snap, FakeXW(), {}, {}, {}, {}, overrides=None, sims=100, now=now)
+    d = blk["deadlines"]
+    assert d["waiver_run_source"] == "default" and d["waiver_run_word"] == "Wed 1:00 AM"
+    assert d["offer_executes_word"] == "Wed 8:00 AM" and d["trade_review_hours"] == 24
+    assert blk["settings"]["trade_revision_hours"] == 24 and blk["settings"]["waiver_process_days"][0] == "MONDAY"
+    ws = [w for w in blk["waivers"] if w.get("on_waivers")]
+    assert ws and all(w["lands"] == "Wed 1:00 AM" for w in ws)
+    assert blk["incoming_trades"][0]["executes"] == "Wed 8:00 AM"
+    md = "\n".join(report._detail_matchup(blk))
+    assert "waivers run Wed 1:00 AM · a trade executes 24h after acceptance" in md
+    # ESPN's own stamp wins when a claim is pending
+    snap["waiver_run_ts"] = int(datetime(2026, 9, 16, 7, 0, tzinfo=UTC).timestamp() * 1000)
+    blk2 = analyze_league(snap, FakeXW(), {}, {}, {}, {}, overrides=None, sims=100, now=now)
+    assert blk2["deadlines"]["waiver_run_source"] == "espn" and blk2["deadlines"]["waiver_run_word"] == "Wed 1:00 AM"

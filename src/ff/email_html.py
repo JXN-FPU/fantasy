@@ -331,7 +331,7 @@ def _league_detail(lg: dict) -> str:
     lw, opp = lg["lineup_win"], lg["opponent"]
     me = lg["odds"].get(str(lg["my_team_id"])) or {}
     acq = f"FAAB left ${lg['faab_remaining']}" if lg.get("faab_remaining") is not None else f"waiver priority #{lg.get('waiver_rank')}"
-    sub = _muted(f"Week {lg['week']} · {_e(acq)} · {lg['weeks_remaining']} weeks left · expected wins {me.get('exp_wins', '?')}")
+    sub = _muted(f"Week {lg['week']} · {_e(acq)} · {lg['weeks_remaining']} weeks left · expected wins {me.get('exp_wins', '?')}{_e(report.clocks_line(lg))}")
     body = _h("Matchup")
     pw = f" · P(win) <b>{lw['p_win']:.0%}</b>" if lw.get("p_win") is not None else ""
     body += _muted(f"You <b>{lw['mu']:.1f}</b> ± {lw['sd']:.0f} vs {_e(opp.get('name') or 'TBD')} <b>{opp.get('mu', '?')}</b> ± {opp.get('sd', '?')}{pw}"
