@@ -7,7 +7,7 @@ from ff import report, rulings
 from ff.model.lineup import optimize
 from ff.model.projections import blend
 from tests.conftest import P
-from tests.test_card import by_id, ids, injury, league, player, trade
+from tests.test_card import by_id, full, ids, injury, league, player, trade
 
 # ---------- lineup: no-op swaps ----------
 
@@ -79,8 +79,8 @@ def test_an_activation_takes_the_drop_row_with_it_instead_of_spending_it_twice()
     lg["injuries"][0]["espn_status"] = "QUESTIONABLE"
     rows = by_id(lg)
     assert "injury:dart" not in rows
-    text = rows["injury:daniels"]["text"]
-    assert text.startswith("move Daniels (QB) off IR, ESPN lists him questionable") and "drop Dart (QB, out ~1 wk" in text
+    text = full(rows["injury:daniels"])
+    assert text.startswith("move Daniels (QB) off IR; drop Dart to make room") and "ESPN lists him questionable" in text and "Dart (QB): out ~1 wk" in text
     assert "Concepcion" not in text
 
 
@@ -97,8 +97,8 @@ def test_an_activation_folds_the_drop_row_whichever_order_decide_put_them_in(dro
     items = report.todos(lg)
     assert "injury:dart" not in {i["id"] for i in items}
     assert sum("drop Dart" in i["text"] for i in items) == 1
-    assert "drop Dart (QB, out ~1 wk" in by_id(lg)["injury:daniels"]["text"]
-    assert not any("Concepcion" in i["text"] for i in items)
+    assert "Dart (QB): out ~1 wk" in full(by_id(lg)["injury:daniels"])
+    assert not any("Concepcion" in full(i) for i in items)
 
 
 def test_a_folded_drop_rows_add_is_not_counted_on_the_ledger():
@@ -110,13 +110,13 @@ def test_a_folded_drop_rows_add_is_not_counted_on_the_ledger():
                 settings={"lineup_slots": {"QB": 1}, "position_limits": {"QB": 1}},
                 trades=[{**trade(["QB In"], ["Bench WR"]), "get_pos": ["QB"], "drops": []}])
     row = by_id(lg)["trade:qb-in"]
-    assert row["drops"] == [] and "ESPN caps" not in row["text"]
+    assert row["drops"] == [] and "ESPN caps" not in full(row)
 
 
 def test_an_activation_uses_an_open_spot_before_naming_a_drop():
     lg = league(roster=[player("Starter WR", slot="WR"), player("Bench WR", ros=3.0)],
                 injuries=[injury("Daniels", "activate", pos="QB", weeks_out=1, return_week=4, fa=None)], open_spots=1, open_spot_adds=[])
-    assert "open bench spot" in by_id(lg)["injury:daniels"]["text"] and "drop" not in by_id(lg)["injury:daniels"]["text"]
+    assert "open bench spot" in full(by_id(lg)["injury:daniels"]) and "drop" not in by_id(lg)["injury:daniels"]["text"]
 
 
 def waiver(name, pos="RB", d_week=3.0, d_start=0.0, on_waivers=False):
@@ -128,7 +128,7 @@ def test_a_waiver_add_uses_the_open_spot_and_the_open_spot_row_does_not_repeat_h
     lg = league(waivers=[waiver("Bassett")], open_spots=1, open_spot_adds=[{"name": "Bassett", "pos": "RB", "kind": "upgrade", "why": "+7.7/wk"}])
     rows = ids(lg)
     assert rows.count("waiver:bassett") == 1
-    text = by_id(lg)["waiver:bassett"]["text"]
+    text = full(by_id(lg)["waiver:bassett"])
     assert "open bench spot" in text and "drop" not in text
 
 
@@ -146,7 +146,7 @@ def test_a_drop_row_with_its_own_add_is_not_the_drop_for_a_pickup_too():
                 injuries=[injury("Done Guy", "drop", weeks_out=15, return_week=None, avail=0.0, fa=("Pickup", 1.2))],
                 waivers=[waiver("Now Guy", d_week=3.0)])
     rows = by_id(lg)
-    assert rows["injury:done-guy"]["text"].endswith("; add Pickup (RB, +1.2/wk)")
+    assert rows["injury:done-guy"]["text"].endswith("; add Pickup (RB)")
     assert rows["waiver:now-guy"]["text"].endswith("; drop Bench B")
 
 
@@ -188,8 +188,8 @@ def test_a_cap_with_nobody_to_drop_says_your_call_instead_of_naming_a_cut():
     assert spots.dropped == [] and spots.counts["QB"] == 1  # a stuck cut spends nothing on the ledger
     row = by_id(one_qb)["trade:qb-in"]
     assert row["drops"] == []
-    assert row["text"] == ("offer Rival your Bench WR for QB In (+1.5 pts/wk for you, +0.5 for them)"
-                           "; ESPN caps QB at 1 and there is no obvious QB to drop, your call")
+    assert row["text"] == "offer Rival your Bench WR for QB In: +1.5/wk for you, +0.5 for them"
+    assert row["detail"] == ["ESPN caps QB at 1 and there is no obvious QB to drop, your call"]
     # the IR occupant counts against the cap but is never the cut: three WRs against a cap of three, one of them on IR
     ir_wr = league(roster=[player("Starter WR", slot="WR"), player("WR Two", slot="WR"), player("IR WR", slot="IR", ros=0.0),
                            player("RB Two", pos="RB", ros=5.0)],
@@ -217,8 +217,8 @@ def test_a_cap_cut_the_bench_only_half_covers_names_the_drop_and_says_one_more_h
     assert spots.dropped == [] and spots.counts["WR"] == 3  # trade rows are alternatives: nothing spent on the ledger
     row = by_id(lg)["trade:wr-in-wr-also"]
     assert row["drops"] == ["Bench WR"]
-    assert row["text"] == ("offer Rival your RB Two for WR In, WR Also (+1.5 pts/wk for you, +0.5 for them)"
-                           "; drop Bench WR in the trade screen (ESPN caps WR at 3) and one more WR has to go, your call")
+    assert row["text"] == "offer Rival your RB Two for WR In, WR Also: +1.5/wk for you, +0.5 for them"
+    assert row["detail"] == ["drop Bench WR in the trade screen (ESPN caps WR at 3) and one more WR has to go, your call"]
     # two short: the count is spelled out and the position is plural
     lg2 = league(roster=[player("Starter WR", slot="WR"), player("WR Two", slot="WR"), player("Bench WR", ros=3.0),
                          player("RB Two", pos="RB", ros=5.0)],
@@ -233,7 +233,7 @@ def test_a_cap_cut_the_bench_only_half_covers_names_the_drop_and_says_one_more_h
 
 def test_a_player_on_waivers_is_a_claim_with_the_priority_spelled_out():
     lg = league(waivers=[waiver("Bassett", on_waivers=True)], waiver_rank=7, faab_remaining=None)
-    assert by_id(lg)["waiver:bassett"]["text"].startswith("claim (waivers, you are priority #7) Bassett (RB)")
+    assert by_id(lg)["waiver:bassett"]["text"].startswith("claim Bassett (RB)") and "you are priority #7" in full(by_id(lg)["waiver:bassett"])
     lg = league(waivers=[waiver("Bassett", on_waivers=False)], waiver_rank=7)
     assert by_id(lg)["waiver:bassett"]["text"].startswith("add Bassett (RB)")
 
@@ -243,7 +243,7 @@ def test_a_player_on_waivers_is_a_claim_with_the_priority_spelled_out():
 def test_the_deadline_closes_the_trade_rows():
     lg = league(trades=[], trades_closed=True, trade_deadline_iso="2026-11-18T22:00")
     row = by_id(lg)["deadline"]
-    assert "trade deadline passed (2026-11-18)" in row["text"]
+    assert "trade deadline passed" in row["text"] and "2026-11-18" in full(row)
 
 
 def test_the_scan_stops_at_the_deadline(monkeypatch):
@@ -289,7 +289,7 @@ def test_the_math_flags_a_big_package_and_the_card_puts_it_first():
     rows = ids(lg)
     assert rows.index("trade:star") < rows.index("trade:meh")
     row = by_id(lg)["trade:star"]
-    assert row["label"] == "Trade (do this one)" and row["push"] and "first ask" in row["text"] and "skip it with a reason" in row["text"]
+    assert row["label"] == "Trade (do this one)" and row["push"] and "first ask" in full(row) and "skip it with a reason" in full(row)
 
 
 def test_a_push_survives_the_three_row_cap():
@@ -318,7 +318,7 @@ def test_a_push_is_remembered_counted_and_closed_by_sending_or_skipping(tmp_path
     cands = rulings.mark_pushed([{"get": ["Star"], "give": ["A"]}, {"get": ["Other"]}], pushes, "L1", today=date(2026, 9, 24))
     assert cands[0]["pushed"]["days"] == 2 and cands[0]["pushed"]["note"] == "Allen wins leagues" and "pushed" not in cands[1]
     lg2 = league(trades=[{**big("Star", mine=1.0), "must_try": False, "pushed": cands[0]["pushed"]}])
-    assert "asked 2 mornings running" in by_id(lg2)["trade:star"]["text"] and "Allen wins leagues" in by_id(lg2)["trade:star"]["text"]
+    assert "asked 2 mornings running" in full(by_id(lg2)["trade:star"]) and "Allen wins leagues" in full(by_id(lg2)["trade:star"])
     assert rulings.record_pushes({"leagues": [lg2]}, {}, path, today=date(2026, 9, 24)) == []  # still open, nothing new
     # Dustin sent it: the package is among his pending offers
     lg3 = {**lg2, "outgoing_trades": [{"rival": "Them", "give": ["A"], "get": ["Star"], "hours_left": 20}]}
@@ -364,14 +364,14 @@ def test_a_remembered_math_push_drops_when_the_row_stops_being_sendable():
     assert "pushed" not in t  # the card's word is final: the dropped memory does not ride on as a push
     # the same morning the math flags a different package, that one is pushed instead
     rows = by_id(league(trades=[stale(), big("Fresh", give=("B",), mine=2.4)]))
-    assert "trade:star" not in rows and rows["trade:fresh"]["push"] and "first ask" in rows["trade:fresh"]["text"]
+    assert "trade:star" not in rows and rows["trade:fresh"]["push"] and "first ask" in full(rows["trade:fresh"])
     # a math push that is still sendable keeps its place and its day count
     rows = by_id(league(trades=[{**stale(), "sendable": True}]))
-    assert rows["trade:star"]["push"] and "asked 3 mornings running" in rows["trade:star"]["text"]
+    assert rows["trade:star"]["push"] and "asked 3 mornings running" in full(rows["trade:star"])
     # Claude's push survives the math turning: his note is the reason, not the lineup gain
     claude = {**stale(), "my_delta_ppw": 0.5, "pushed": {"since": "2026-10-06", "days": 3, "note": "Allen wins leagues", "source": "claude"}}
     rows = by_id(league(trades=[claude]))
-    assert rows["trade:star"]["push"] and "Allen wins leagues" in rows["trade:star"]["text"] and "asked 3 mornings running" in rows["trade:star"]["text"]
+    assert rows["trade:star"]["push"] and "Allen wins leagues" in full(rows["trade:star"]) and "asked 3 mornings running" in full(rows["trade:star"])
 
 
 def test_a_sent_or_skipped_push_stays_closed_until_claude_pushes_again(tmp_path):

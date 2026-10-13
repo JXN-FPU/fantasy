@@ -114,15 +114,14 @@ def test_card_lists_every_worth_sending_trade(monkeypatch):
     assert [r["label"] for r in rows] == ["Trade (do this one)", "Trade (worth sending)"]
     assert [r["push"] for r in rows] == [True, False] and all(r["worth"] for r in rows)
     assert rows[0]["rival"] == "Ctrl+Alt+Delete Kelce" and rows[0]["give"] == ["Cy Big"] and rows[0]["get"] == ["Dee Star"]
-    assert rows[0]["text"] == ("offer Ctrl+Alt+Delete Kelce your Cy Big for Dee Star (+2.6 pts/wk for you, +0.1 for them, he'd likely take it, p(accept) 0.70) "
-                               "— too good to let slide (+2.6 pts/wk is a big lineup gain by the math); first ask. "
-                               "Send it, or skip it with a reason and it stops")
-    assert rows[1]["text"] == "offer Sunday Scaries your Al Fair for Bo Swap (+1.1 pts/wk for you, +0.3 for them)"
+    assert rows[0]["text"] == "offer Ctrl+Alt+Delete Kelce your Cy Big for Dee Star: +2.6/wk for you, +0.1 for them, he'd likely take it (70%)"
+    assert rows[0]["detail"] == ["first ask: +2.6 pts/wk by the math; skip it with a reason and it stops"]
+    assert rows[1]["text"] == "offer Sunday Scaries your Al Fair for Bo Swap: +1.1/wk for you, +0.3 for them" and rows[1]["detail"] == []
     assert rows[0]["p_accept"] == 0.7 and rows[1]["p_accept"] is None and rows[0]["drops"] == [] and rows[0]["warn"] == []
     # a neutral package reads "neutral for them"; with no push the sendable ones fill the card in scan order
     rows = _trade_rows(blk, [reach, even, fair])
     assert [r["id"] for r in rows] == ["trade:fy-even", "trade:bo-swap"] and not any(r["push"] for r in rows)
-    assert rows[0]["text"] == "offer Bye Week Blues your Ed Even for Fy Even (+0.9 pts/wk for you, neutral for them)"
+    assert rows[0]["text"] == "offer Bye Week Blues your Ed Even for Fy Even: +0.9/wk for you, neutral for them"
     # two packages the math flags: only the bigger gain is pushed, the other is demoted and not on the card this morning
     small = _trade("Sunday Scaries", ["Gus Small"], ["Hal Small"], 2.2, 0.2, must_try=True)
     rows = _trade_rows(blk, [fair, small, big])
@@ -132,7 +131,7 @@ def test_card_lists_every_worth_sending_trade(monkeypatch):
     held = _trade("Bye Week Blues", ["Ian Hold"], ["Jo Hold"], 1.4, -0.2, pushed={"source": "claude", "days": 3, "note": "he needs a QB"})
     rows = _trade_rows(blk, [fair, held])
     assert [(r["id"], r["label"], r["worth"]) for r in rows] == [("trade:jo-hold", "Trade (do this one)", False), ("trade:bo-swap", "Trade (worth sending)", True)]
-    assert rows[0]["text"].endswith("— too good to let slide (he needs a QB); asked 3 mornings running. Send it, or skip it with a reason and it stops")
+    assert rows[0]["detail"][-1] == "asked 3 mornings running: he needs a QB; skip it with a reason and it stops"
     # nothing sendable: no trade row at all, not a "reach" row
     assert _trade_rows(blk, [reach]) == [] and _trade_rows(blk, []) == []
 
@@ -217,8 +216,8 @@ def test_an_accepted_trade_is_applied_to_the_rosters_before_it_processes(monkeyp
     assert len(blk["incoming_trades"]) == 1  # the other proposal is still an offer to rule on
     rows = report.todos(blk)
     sent = next(x for x in rows if x["kind"] == "sent")
-    assert "is accepted, processes" in sent["text"] and "frees 1 bench spot when it processes" in sent["text"]
-    assert f"then add {blk['trade_adds_after'][0]['name']}" in sent["text"]
+    assert "is accepted, processes" in sent["text"] and "1 bench spot open then" in sent["text"]
+    assert f"add {blk['trade_adds_after'][0]['name']}" in sent["text"]
     for x in rows:
         if x["kind"] != "sent":
             assert not any(n in x["text"] for n in give), (x["kind"], x["text"])

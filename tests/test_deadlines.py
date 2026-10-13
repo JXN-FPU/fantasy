@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 from ff import ledger, report
 from ff.model import deadlines as dl
-from tests.test_card import by_id, league, player
+from tests.test_card import by_id, full, league, player
 from tests.test_review_fixes import waiver
 
 ET = dl.ET
@@ -75,7 +75,7 @@ def test_claim_rows_say_when_the_claim_lands_and_the_header_carries_the_clocks()
     w = {**waiver("Claim Guy", d_week=3.0, on_waivers=True), "lands": "Wed 1:00 AM", "lands_ts": 10}
     lg = league(waivers=[w], open_spots=1, waiver_rank=7, deadlines=_dl())
     row = by_id(lg)["waiver:claim-guy"]
-    assert "claim (waivers, you are priority #7, lands Wed 1:00 AM) Claim Guy" in row["text"]
+    assert row["text"].startswith("claim Claim Guy (RB)") and "waivers: you are priority #7, lands Wed 1:00 AM" in report.detail_line(row)
     assert report.clocks_line(lg) == " · waivers run Wed 1:00 AM · a trade executes 24h after acceptance"
     assert report.clocks_line(league()) == ""
 
@@ -90,14 +90,15 @@ def test_a_claim_landing_after_the_trade_processes_takes_the_spot_the_trade_free
     # lands after: the freed spot covers it, no drop; the Accepted row says one spot went to the claim
     late = {**waiver("Late Guy", d_week=3.0, on_waivers=True), "lands": "Wed 9:00 AM", "lands_ts": proc + 1}
     rows = by_id(league(**base, waivers=[late], deadlines=_dl(run_ts=proc + 1)))
-    assert "lands after the accepted trade processes, so the spot the trade frees covers it; no drop" in rows["waiver:late-guy"]["text"]
-    assert "1 of them goes to the claim above" in rows["sent:new-rb"]["text"] and "then add" not in rows["sent:new-rb"]["text"]
+    assert "lands after the accepted trade processes, so the spot the trade frees covers it; no drop" in report.detail_line(rows["waiver:late-guy"])
+    assert "drop" not in rows["waiver:late-guy"]["text"]
+    assert "1 of the spots goes to the claim above" in report.detail_line(rows["sent:new-rb"]) and "add" not in rows["sent:new-rb"]["text"]
     # lands before: a drop today, the freed spot stays listed with its add, and the row says the waiver run comes first
     early = {**waiver("Early Guy", d_week=3.0, on_waivers=True), "lands": "Wed 1:00 AM", "lands_ts": proc - 1}
     rows = by_id(league(**base, waivers=[early], deadlines=_dl(run_ts=proc - 1)))
     assert "drop Bench WR" in rows["waiver:early-guy"]["text"]
-    sent = rows["sent:new-rb"]["text"]
-    assert "the waiver run (Wed 1:00 AM) comes first, so a claim placed today still needs a drop" in sent and "then add Wire RB" in sent
+    sent = full(rows["sent:new-rb"])
+    assert "the waiver run (Wed 1:00 AM) comes first, so a claim placed today still needs a drop" in sent and "add Wire RB (RB)" in rows["sent:new-rb"]["text"]
     # the ledger alone
     lg = league(**base)
     sp = ledger.Spots(lg, 0, set())
@@ -113,7 +114,7 @@ def test_offer_and_trade_rows_say_when_the_deal_executes():
     assert "executes Thu 9:00 PM, after the next kickoff: a player whose game has started by then is locked until next week" in report.incoming_line(t2)
     from tests.test_card import trade
     lg = league(trades=[trade(["Star"], ["Bench WR"])], deadlines=_dl(executes="Wed 10:05 AM"))
-    assert "; if he accepts today it executes Wed 10:05 AM" in by_id(lg)["trade:star"]["text"]
+    assert "if he accepts today it executes Wed 10:05 AM" in report.detail_line(by_id(lg)["trade:star"])
     lg2 = league(trades=[trade(["Star"], ["Bench WR"])], deadlines=_dl(executes="Thu 9:00 PM", after=True))
-    assert "after the Thu 6:15 PM kickoff" in by_id(lg2)["trade:star"]["text"]
-    assert "executes" not in by_id(league(trades=[trade(["Star"], ["Bench WR"])]))["trade:star"]["text"]
+    assert "after the Thu 6:15 PM kickoff" in report.detail_line(by_id(lg2)["trade:star"])
+    assert "executes" not in full(by_id(league(trades=[trade(["Star"], ["Bench WR"])]))["trade:star"])

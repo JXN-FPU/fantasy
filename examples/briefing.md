@@ -3,13 +3,13 @@
 ## Demo League
 _4-0 · vs Bye Week Blues · win 59% · playoffs 97.6% · title 21.4%_  
 
-- **Incoming offer (DECLINE):** The Tuesday Regrets offers Dontae Kowalczyk for your Jalen Haggerty, Silas Pennington: -4.5 pts/wk for you, +4.5 for them, title odds -11.6; expires in 21h
-- **IR:** move Grady Sorensen (WR) to IR (out ~4 wks, back wk 9), then add Kwame Brandt (WR, +0.9/wk) — **note:** Brandt is cover for the Sorensen weeks only; he is the first cut when a spot is needed
-- **Waiver:** add Jermaine Vell (TE) and start him at TE (+7 pts this week) (there is an open bench spot); if he is gone, Jaxon Bassett (RB, +7 this week) — **note:** the full bid is right; Beau Bassett is the fallback if you're outbid
-- **Stream:** swap in Texans D/ST at D/ST (+2.6 this week)
+- **Incoming offer (DECLINE):** The Tuesday Regrets offers Dontae Kowalczyk for your Jalen Haggerty, Silas Pennington: -4.5 pts/wk for you, +4.5 for them _(title odds -11.6 · expires in 21h)_
+- **IR:** move Grady Sorensen (WR) to IR, then add Kwame Brandt (WR) _(out ~4 wks, back wk 9 · Kwame Brandt: +0.9/wk)_ — **note:** Brandt is cover for the Sorensen weeks only; he is the first cut when a spot is needed
+- **Waiver:** add Jermaine Vell (TE) and start him at TE _(+7 pts this week · there is an open bench spot · if he is gone, Jaxon Bassett (RB, +7 this week))_ — **note:** the full bid is right; Beau Bassett is the fallback if you're outbid
+- **Stream:** swap in Texans D/ST at D/ST _(+2.6 this week)_
 - **Lineup (in order):** Cole Ibarra: QB → bench · Beau Whitlock: bench → QB · Nico Vell: bench → RB/WR/TE · Jermaine Vell: free agent → TE over Reggie Lindqvist once the add above is through
-- **Already sent:** your Rico Achebe for Rico Saldana is still waiting on Waiver Wire Widows, 21h left
-- **Trade (worth sending):** offer Bye Week Blues your Nico Vell for Dontae Rutherford (+1.1 pts/wk for you, +0.3 for them, coin flip, p(accept) 0.46); he'd start Jaxon Bassett (the wire), Landon Marchetti (the wire) at RB after — they start Dontae Rutherford today — **note:** send it today: Rutherford practiced in full, and Bye Week Blues has been streaming RB all month anyway, so the wire bodies the row names are what he runs out now
+- **Already sent:** your Rico Achebe for Rico Saldana is still waiting on Waiver Wire Widows _(21h left)_
+- **Trade (worth sending):** offer Bye Week Blues your Nico Vell for Dontae Rutherford: +1.1/wk for you, +0.3 for them, coin flip (46%) _(he'd start Jaxon Bassett (the wire), Landon Marchetti (the wire) at RB after)_ — they start Dontae Rutherford today — **note:** send it today: Rutherford practiced in full, and Bye Week Blues has been streaming RB all month anyway, so the wire bodies the row names are what he runs out now
 
 **Claude's read:** Rutherford's boot was precautionary and he practiced in full Thursday, so the ask is live. Ibarra is still a game-time call, so Whitlock starts Sunday. Brandt is a bye-week body until Sorensen is back in week 9, not a starter.  
 **Paste to Bye Week Blues:** "hey, would you do Nico Vell for Rutherford? you've been thin at WR and he'd start for you every week, and I need an RB body back for byes. no worries if not"  
@@ -73,7 +73,7 @@ Bench: Cole Ibarra, Malik Okafor, Cole Ruiz-Hollis, Grady Sorensen, Rico Achebe
 Handcuffs: Rico Pennington for Deon Castellano (owned); Deshawn Haggerty for Jalen Haggerty (owned)
 
 ## Incoming offers
-- **DECLINE** — The Tuesday Regrets offers Dontae Kowalczyk for your Jalen Haggerty, Silas Pennington: -4.5 pts/wk for you, +4.5 for them, title odds -11.6; expires in 21h. fills my RB hole; 2-for-1: I consolidate, they get depth
+- **DECLINE** — The Tuesday Regrets offers Dontae Kowalczyk for your Jalen Haggerty, Silas Pennington: -4.5 pts/wk for you, +4.5 for them; title odds -11.6; expires in 21h. fills my RB hole; 2-for-1: I consolidate, they get depth
 Your open offers: Rico Achebe for Rico Saldana to Waiver Wire Widows
 
 ## Trade candidates

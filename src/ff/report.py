@@ -127,16 +127,37 @@ def sendable(t: dict) -> bool:
 
 
 def push_line(t: dict) -> str:
-    """Why this trade is at the top and how to make it stop: the day count and the reason (Claude's note or the math)."""
+    """Why this trade is at the top and how to make it stop: the day count and the reason (Claude's note or the math).
+    Detail-line material: "first ask: +2.3 pts/wk by the math; skip it with a reason and it stops"."""
     p = t.get("pushed") or {}
     days = int(p.get("days") or 1)
-    why = p.get("note") or f"+{t['my_delta_ppw']:.1f} pts/wk is a big lineup gain by the math"
+    why = p.get("note") or f"+{t['my_delta_ppw']:.1f} pts/wk by the math"
     asked = f"asked {days} mornings running" if days > 1 else "first ask"
-    return f"— too good to let slide ({why}); {asked}. Send it, or skip it with a reason and it stops"
+    return f"{asked}: {why}; skip it with a reason and it stops"
 
 
 # Trade rows on the card. Two: a third is where the laughed-at packages used to live.
 TRADE_ROWS = 2
+
+# A row's `text` is the click, one sentence; the reasons, clocks and numbers ride in `detail` (the grey line under
+# it in the email, the parenthetical in the markdown). Oct 13: the Accepted row ran to 90 words on a phone.
+MAX_ROW_WORDS = 30
+
+
+def words(text: str) -> int:
+    return len(text.split())
+
+
+def _spot_words(drop: str | None, suffix: str) -> tuple[str, list[str]]:
+    """Split a `Spots.take` suffix into the click ("; drop X") and the reason behind it for the detail line."""
+    def unwrap(x: str) -> str:
+        m = re.match(r"^\((.*?)\)(.*)$", x.strip())   # the first parenthetical opened up; what follows it stays as is
+        return (m.group(1) + m.group(2)) if m else x.strip()
+    if drop:
+        rest = unwrap(suffix.replace(f"; drop {drop}", "", 1))
+        return f"; drop {drop}", [f"{drop}: {rest}"] if rest else []
+    rest = unwrap(suffix)
+    return "", [rest] if rest else []
 
 
 def trade_tag(t: dict) -> str:
@@ -159,24 +180,32 @@ def executes_note(dl: dict, lead: str) -> str:
     return out
 
 
-def incoming_line(t: dict) -> str:
-    """One sentence on an offer someone sent me: what moves, what it does for each side, when it expires, and when
-    it executes if accepted now (the review period)."""
-    td = f", title odds {t['my_title_delta']:+.1f}" if t.get("my_title_delta") is not None else ""
-    left = f"; expires in {t['hours_left']:.0f}h" if t.get("hours_left") is not None else ""
-    cut = ""
+def incoming_parts(t: dict) -> tuple[str, list[str]]:
+    """(the offer in one sentence, the detail behind it): what moves and what it does for each side on the line; the
+    title odds, the expiry, the cut ESPN demands, the counter and the execution clock underneath."""
+    text = (f"{t['rival']} offers {', '.join(t['get']) or 'nothing'} for your {', '.join(t['give']) or 'nothing'}: "
+            f"{t['my_delta_ppw']:+.1f} pts/wk for you, {t['their_delta_ppw']:+.1f} for them")
+    detail = []
+    if t.get("my_title_delta") is not None:
+        detail.append(f"title odds {t['my_title_delta']:+.1f}")
+    if t.get("hours_left") is not None:
+        detail.append(f"expires in {t['hours_left']:.0f}h")
     if t.get("drops"):
-        cut = "; accepting means dropping " + ", ".join(f"{d['name']} ({d['cap']}-{d['pos']} cap)" for d in t["drops"])
-    counter = ""
+        detail.append("accepting means dropping " + ", ".join(f"{d['name']} ({d['cap']}-{d['pos']} cap)" for d in t["drops"]))
     if t.get("verdict") == "counter" and t.get("counter"):
-        counter = f"; counter with your {', '.join(t['counter']['give'])} for {', '.join(t['counter']['get'])} ({t['counter']['my_delta_ppw']:+.1f} for you, fair on his chart)"
-    ex = ""
+        detail.append(f"counter with your {', '.join(t['counter']['give'])} for {', '.join(t['counter']['get'])} ({t['counter']['my_delta_ppw']:+.1f} for you, fair on his chart)")
     if t.get("executes"):
-        ex = f"; accept now and it executes {t['executes']}"
+        ex = f"accept now and it executes {t['executes']}"
         if t.get("executes_after_kickoff"):
             ex += ", after the next kickoff: a player whose game has started by then is locked until next week"
-    return (f"{t['rival']} offers {', '.join(t['get']) or 'nothing'} for your {', '.join(t['give']) or 'nothing'}: "
-            f"{t['my_delta_ppw']:+.1f} pts/wk for you, {t['their_delta_ppw']:+.1f} for them{td}{left}{cut}{counter}{ex}")
+        detail.append(ex)
+    return text, detail
+
+
+def incoming_line(t: dict) -> str:
+    """The offer and its detail in one line, for the terminal and the detail tables."""
+    text, detail = incoming_parts(t)
+    return text + ("; " + "; ".join(detail) if detail else "")
 
 
 # Slots the flex cannot cover, so the last healthy body at the position is the whole slot.
@@ -225,35 +254,39 @@ def _cover_items(lg: dict, spots: Spots, added: set[str]) -> list[dict]:
         pool = [w for w in lg["waivers"] if w["pos"] == pos and w["name"] not in added]
         fa = next((w for w in pool if not w.get("on_waivers")), pool[0] if pool else None)
         risk = "on bye" if who["bye"] else f"{who['p_zero']:.0%} to sit"
-        _, suffix = spots.take(adding=pos, lands_ts=(fa or {}).get("lands_ts"))
+        drop, suffix = spots.take(adding=pos, lands_ts=(fa or {}).get("lands_ts"))
+        click, detail = _spot_words(drop, suffix)
         if fa is None:
             plan = "grab a startable one off the wire before kickoff"
         elif fa.get("on_waivers"):
-            plan = f"{_add_verb(lg, fa)} {fa['name']} ({fa['team']}) now, nobody at {pos} is a free agent and the claim lands {fa.get('lands') or 'on waiver day'}"
+            plan = f"claim {fa['name']} ({fa['team']})"
+            detail = [f"nobody at {pos} is a free agent; the claim lands {fa.get('lands') or 'on waiver day'}", *_claim_detail(lg, fa), *detail]
         else:
             plan = f"add {fa['name']} ({fa['team']}) before kickoff"
         if fa is not None:
             added.add(fa["name"])
         out.append({"kind": "cover", "id": f"cover:{slug(pos)}", "label": f"Cover {pos}",
-                    "text": f"{who['name']} is {risk} and he is your only {pos}; {plan}{suffix}"})
+                    "text": f"{who['name']} is {risk} and your only {pos}: {plan}{click}", "detail": detail})
     return out
 
 
 def _add_verb(lg: dict, w: dict) -> str:
     """"claim" for a player still on waivers (the click is a claim that processes on waiver day, and in a priority
-    league it goes to the highest priority), "add" for a free agent who is yours the moment you click."""
-    if w.get("on_waivers"):
-        pri = lg.get("waiver_rank")
-        faab = lg.get("faab_remaining") is not None
-        lands = f", lands {w['lands']}" if w.get("lands") else ""
-        return "claim" + (f" (waivers, bid ${w['bid']}{lands})" if faab and w.get("bid") else (f" (waivers, you are priority #{pri}{lands})" if pri else f" (waivers{lands})"))
-    return "add"
+    league it goes to the highest priority), "add" for a free agent who is yours the moment you click. The bid, the
+    priority and the landing time are `_claim_detail`."""
+    return "claim" if w.get("on_waivers") else "add"
 
 
-def _claim_note(lg: dict, w: dict) -> str:
+def _claim_detail(lg: dict, w: dict) -> list[str]:
+    """"waivers: bid $12, lands Wed 1:00 AM" / "waivers: you are priority #7, lands Wed 1:00 AM" on a claim; nothing
+    on a free agent."""
     if not w.get("on_waivers"):
-        return ""
-    return f" (he is on waivers, so the claim lands {w['lands']})" if w.get("lands") else " (he is on waivers, so the claim lands on waiver day)"
+        return []
+    pri = lg.get("waiver_rank")
+    faab = lg.get("faab_remaining") is not None
+    how = f"bid ${w['bid']}" if faab and w.get("bid") else (f"you are priority #{pri}" if pri else "")
+    lands = f"lands {w['lands']}" if w.get("lands") else "lands on waiver day"
+    return ["waivers: " + ", ".join(x for x in (how, lands) if x)]
 
 
 INJURY_LABEL = {"ir": "IR", "hold": "Holding", "drop": "Drop", "trade": "Hurt (trade)", "activate": "Activate"}
@@ -300,50 +333,66 @@ def _injury_items(lg: dict, spots: Spots | None = None) -> list[dict]:
         if v == "hold" and r["weeks_out"] < 2:
             continue  # out one game and worth keeping: the lineup row already handles him, this would be the injury report
         back = f", back wk {r['return_week']}" if r.get("return_week") else ""
+        horizon = f"out {_weeks(r)}{back}"
         add = r.get("add")
         kind = "injury"
+        detail = [horizon]
         if v == "ir":
-            text = f"move {who} to IR (out {_weeks(r)}{back})"
+            text = f"move {who} to IR"
             if r.get("ir_occupant"):
                 text += f" in place of {r['ir_occupant']}"
             elif add:
-                text += f", then add {add['name']} ({add['pos']}, {add['why']})"
+                text += f", then add {add['name']} ({add['pos']})"
+                detail.append(f"{add['name']}: {add['why']}")
                 spots.note(add_pos=add["pos"])
         elif v == "activate":
             st = (r.get("espn_status") or "active").replace("_", " ").lower()
-            text = f"move {who} off IR, ESPN lists him {st} so the slot has to be cleared"
+            text = f"move {who} off IR"
+            detail = [f"ESPN lists him {st}, so the slot has to be cleared"]
             drop, suffix = taken[r["name"]]
             # The drop is the body the stash brought in: say so, so a round trip reads as one (Daniels, Oct 3 to 7).
             came_in = _stash_note(r, drop)
             if drop in folded:
                 d = drop_rows[drop]
-                text += f"; drop {drop} ({d['pos']}, out {_weeks(d)}, worth ~{d['hold_value']:.0f} pts the rest of the way{came_in}) to make room"
+                text += f"; drop {drop} to make room"
+                detail.append(f"{drop} ({d['pos']}): out {_weeks(d)}, worth ~{d['hold_value']:.0f} pts the rest of the way{came_in}")
             else:
-                text += suffix + (f"{came_in} to make room" if drop else "")
+                click, more = _spot_words(drop, suffix)
+                text += (click + " to make room") if drop else ""
+                if drop:
+                    detail += [m + came_in for m in more] if more else ([f"{drop}{came_in}"] if came_in else [])
+                else:
+                    detail += more
         elif v == "drop":
-            text = f"drop {who}: out {_weeks(r)}{back}, worth ~{r['hold_value']:.0f} pts the rest of the way"
+            text = f"drop {who}"
+            detail = [f"{horizon}, worth ~{r['hold_value']:.0f} pts the rest of the way"]
             spots.note(drop=r["name"], add_pos=add["pos"] if add else None)
             if add:
-                text += f"; add {add['name']} ({add['pos']}, {add['why']})"
+                text += f"; add {add['name']} ({add['pos']})"
+                detail.append(f"{add['name']}: {add['why']}")
         elif v == "trade":
             t = r["trades"][0]
-            text = f"the offer to {t['rival']} for {', '.join(t['get'])} ships {who} (out {_weeks(r)}{back}); else hold"
+            text = f"the offer to {t['rival']} for {', '.join(t['get'])} ships {who}; else hold"
         else:
             kind = "hold"
             games = f"{r['back_eff']:.0f} game{'s' if r['back_eff'] >= 1.5 else ''}"
-            text = f"{who} out {_weeks(r)}{back}, {games} at ~{r['mu_ros_active']:.0f}/g on return"
+            text = f"{who} {horizon}"
+            detail = [f"{games} at ~{r['mu_ros_active']:.0f}/g on return"]
             if r.get("why"):
-                text += f"; {r['why'][0]}"
-        out.append({"kind": kind, "id": f"injury:{slug(r['name'])}", "label": INJURY_LABEL[v], "verdict": v, "text": text,
+                detail.append(r["why"][0])
+        out.append({"kind": kind, "id": f"injury:{slug(r['name'])}", "label": INJURY_LABEL[v], "verdict": v, "text": text, "detail": detail,
                     "trade_ids": [f"trade:{slug('-'.join(t['get']))}" for t in r.get("trades") or []]})
     return out
 
 
 def _offer_items(lg: dict) -> list[dict]:
     """One row per offer someone sent me, with the verdict in the label: the first thing to answer."""
-    return [{"kind": "trade_in", "id": f"offer:{slug('-'.join(t['get']) or t['rival'] or 'offer')}",
-             "label": f"Incoming offer ({VERDICT_WORD[t['verdict']]})", "verdict": t["verdict"], "text": incoming_line(t)}
-            for t in lg.get("incoming_trades") or []]
+    out = []
+    for t in lg.get("incoming_trades") or []:
+        text, detail = incoming_parts(t)
+        out.append({"kind": "trade_in", "id": f"offer:{slug('-'.join(t['get']) or t['rival'] or 'offer')}",
+                    "label": f"Incoming offer ({VERDICT_WORD[t['verdict']]})", "verdict": t["verdict"], "text": text, "detail": detail})
+    return out
 
 
 def _pickup_move(lg: dict, w: dict) -> str:
@@ -387,23 +436,32 @@ def _waiver_items(lg: dict, spots: Spots, added: set[str]) -> list[dict]:
     ups = [w for w in lg["waivers"] if not w["streamer"] and w["delta_over_starter"] >= waivers_model.CLAIM_WORTHY_PPW and w not in starts and w["name"] not in added]
     out = []
     for w in starts[:1]:
-        _, suffix = spots.take(adding=w["pos"], lands_ts=w.get("lands_ts"))
+        drop, suffix = spots.take(adding=w["pos"], lands_ts=w.get("lands_ts"))
+        click, spot = _spot_words(drop, suffix)
         added.add(w["name"])
         nxt = next((x for x in starts if x is not w), None)
-        fallback = f"; if he is gone, {nxt['name']} ({nxt['pos']}, +{nxt['delta_week']:.0f} this week)" if nxt else ""
+        detail = [f"+{w['delta_week']:.0f} pts this week{due_note(w.get('kickoff_day'))}", *_claim_detail(lg, w), *_priority_detail(lg, w), *spot]
+        if nxt:
+            detail.append(f"if he is gone, {nxt['name']} ({nxt['pos']}, +{nxt['delta_week']:.0f} this week)")
         out.append({"kind": "waiver", "id": f"waiver:{slug(w['name'])}", "label": "Waiver",
-                    "text": f"{_add_verb(lg, w)} {w['name']} ({w['pos']}) and start him at {w['week_slot']} (+{w['delta_week']:.0f} pts this week)"
-                            f"{due_note(w.get('kickoff_day'))}{_priority_note(lg, w)}{suffix}{fallback}",
-                    "pickup": None if w.get("on_waivers") else w})
+                    "text": f"{_add_verb(lg, w)} {w['name']} ({w['pos']}) and start him at {w['week_slot']}{click}",
+                    "detail": detail, "pickup": None if w.get("on_waivers") else w})
     for w in ups[:1]:
-        _, suffix = spots.take(adding=w["pos"], lands_ts=w.get("lands_ts"))
+        drop, suffix = spots.take(adding=w["pos"], lands_ts=w.get("lands_ts"))
+        click, spot = _spot_words(drop, suffix)
         added.add(w["name"])
         nxt = next((x for x in ups if x is not w), None)
-        fallback = f"; if he is gone, {nxt['name']} ({nxt['pos']}, +{nxt['delta_over_starter']:.1f}/wk)" if nxt else ""
+        detail = [f"+{w['delta_over_starter']:.1f}/wk over your {w['slot']}{due_note(w.get('kickoff_day'))}", *_claim_detail(lg, w), *_priority_detail(lg, w), *spot]
+        if nxt:
+            detail.append(f"if he is gone, {nxt['name']} ({nxt['pos']}, +{nxt['delta_over_starter']:.1f}/wk)")
         out.append({"kind": "waiver_up", "id": f"waiver:{slug(w['name'])}", "label": "Waiver (upgrade)",
-                    "text": f"{_add_verb(lg, w)} {w['name']} ({w['pos']}), +{w['delta_over_starter']:.1f}/wk over your {w['slot']}"
-                            f"{due_note(w.get('kickoff_day'))}{_priority_note(lg, w)}{suffix}{fallback}"})
+                    "text": f"{_add_verb(lg, w)} {w['name']} ({w['pos']}){click}", "detail": detail})
     return out
+
+
+def _priority_detail(lg: dict, w: dict) -> list[str]:
+    n = _priority_note(lg, w)
+    return [n[2:]] if n else []
 
 
 def _priority_note(lg: dict, w: dict) -> str:
@@ -427,7 +485,8 @@ def _priority_note(lg: dict, w: dict) -> str:
 def _stream_items(lg: dict) -> list[dict]:
     """The one streamer (K, D/ST, a bye-week QB) worth swapping in this week; a swap spends no spot."""
     return [{"kind": "stream", "id": f"stream:{slug(w['name'])}", "label": "Stream",
-             "text": f"swap in {w['name']} at {w['pos']} (+{w['delta_over_starter']:.1f} this week){due_note(w.get('kickoff_day'))}" + _claim_note(lg, w)}
+             "text": f"swap in {w['name']} at {w['pos']}",
+             "detail": [f"+{w['delta_over_starter']:.1f} this week{due_note(w.get('kickoff_day'))}", *_claim_detail(lg, w)]}
             for w in [w for w in lg["waivers"] if w["streamer"] and w["delta_over_starter"] >= 1.5][:1]]
 
 
@@ -443,7 +502,8 @@ def _open_spot_items(lg: dict, spots: Spots, added: set[str]) -> list[dict]:
         added.add(a["name"])
         w = next((w for w in lg["waivers"] if w["name"] == a["name"]), None)
         out.append({"kind": "waiver", "id": f"open:{slug(a['name'])}", "label": "Open spot",
-                    "text": f"{_add_verb(lg, w) if w else 'add'} {a['name']} ({a['pos']}, {a['why']}) to the open bench spot"})
+                    "text": f"{_add_verb(lg, w) if w else 'add'} {a['name']} ({a['pos']}) to the open bench spot",
+                    "detail": [a["why"], *(_claim_detail(lg, w) if w else [])]})
     return out
 
 
@@ -454,34 +514,34 @@ def _sent_items(lg: dict, spots: Spots | None = None) -> list[dict]:
     accepted trade frees are listed less the ones a claim landing after it already took."""
     out = []
     if lg.get("trades_closed"):
-        out.append({"kind": "sent", "id": "deadline", "label": "Trades",
-                    "text": f"the trade deadline passed ({(lg.get('trade_deadline_iso') or '')[:10]}); the rest of the way is waivers only"})
+        out.append({"kind": "sent", "id": "deadline", "label": "Trades", "text": "the trade deadline passed; the rest of the way is waivers only",
+                    "detail": [f"deadline {(lg.get('trade_deadline_iso') or '')[:10]}"]})
     spots_said = False
     for t in lg.get("outgoing_trades") or []:
         if t.get("accepted"):
             give, get = ", ".join(t["give"]) or "nothing", ", ".join(t["get"]) or "nothing"
-            text = (f"your {give} for {get} with {t['rival'] or 'them'} is accepted{processes_note(t)}; this card already "
-                    f"counts it ({get} on your roster for Sunday, {give} off it)")
+            text = f"the {get} trade is accepted{processes_note(t)}"
+            detail = [f"your {give} for {get} with {t['rival'] or 'them'}; this card already counts it ({get} on your roster for Sunday, {give} off it)"]
             n_all = int(lg.get("trade_spots_after") or 0)
             n = spots.after_open if spots is not None else n_all
             if n_all and not spots_said:
                 spots_said = True
                 adds = (lg.get("trade_adds_after") or [])[:n]
                 taken = n_all - n
-                text += f"; it frees {n_all} bench spot{'s' if n_all != 1 else ''} when it processes, not before"
+                text += f"; {n_all} bench spot{'s' if n_all != 1 else ''} open then"
+                if adds:
+                    text += ": add " + ", ".join(f"{a['name']} ({a['pos']})" for a in adds)
+                    detail += [f"{a['name']}: {a['why']}" for a in adds]
                 if taken:
-                    text += f" ({taken} of them {'goes' if taken == 1 else 'go'} to the claim above, which lands after it)"
+                    detail.append(f"{taken} of the spots {'goes' if taken == 1 else 'go'} to the claim above, which lands after it")
                 dl = lg.get("deadlines") or {}
                 if dl.get("waiver_run_ts") and t.get("process_ts") and dl["waiver_run_ts"] < t["process_ts"]:
-                    text += f"; the waiver run ({dl.get('waiver_run_word')}) comes first, so a claim placed today still needs a drop"
-                if adds:
-                    text += ": then add " + ", ".join(f"{a['name']} ({a['pos']}, {a['why']})" for a in adds)
-            out.append({"kind": "sent", "id": f"sent:{slug('-'.join(t['get']) or t['rival'] or 'sent')}", "label": "Accepted", "text": text})
+                    detail.append(f"the waiver run ({dl.get('waiver_run_word')}) comes first, so a claim placed today still needs a drop")
+            out.append({"kind": "sent", "id": f"sent:{slug('-'.join(t['get']) or t['rival'] or 'sent')}", "label": "Accepted", "text": text, "detail": detail})
             continue
-        left = f", {t['hours_left']:.0f}h left" if t.get("hours_left") is not None else ""
         out.append({"kind": "sent", "id": f"sent:{slug('-'.join(t['get']) or t['rival'] or 'sent')}", "label": "Already sent",
-                    "text": f"your {', '.join(t['give']) or 'nothing'} for {', '.join(t['get']) or 'nothing'} is still "
-                            f"waiting on {t['rival'] or 'them'}{left}"})
+                    "text": f"your {', '.join(t['give']) or 'nothing'} for {', '.join(t['get']) or 'nothing'} is still waiting on {t['rival'] or 'them'}",
+                    "detail": [f"{t['hours_left']:.0f}h left"] if t.get("hours_left") is not None else []})
     return out
 
 
@@ -522,10 +582,10 @@ TRADE_WARN_PREFIXES = ("leaves me", "leaves them", "market says I", "they start"
 
 
 def accept_note(t: dict) -> str:
-    """", coin flip, p(accept) 0.42": the bucket word and the number behind it (`model/acceptance.py`); the word alone
-    on an older packet, nothing when the scan did not score it."""
+    """", coin flip (42%)": the bucket word and the number behind it (`model/acceptance.py`); the word alone on an
+    older packet, nothing when the scan did not score it."""
     word = f", {t['accept_word']}" if t.get("accept_word") else ""
-    return word + (f", p(accept) {t['p_accept']:.2f}" if t.get("p_accept") is not None else "")
+    return word + (f" ({t['p_accept']:.0%})" if t.get("p_accept") is not None else "")
 
 
 def _trade_item(t: dict, spots: Spots, push: bool, lg: dict | None = None) -> dict:
@@ -535,20 +595,24 @@ def _trade_item(t: dict, spots: Spots, push: bool, lg: dict | None = None) -> di
     warn = [_to_dustin(w) for w in t["why"] if w.startswith(TRADE_WARN_PREFIXES)]
     them = "neutral for them" if abs(t["their_delta_ppw"]) < 0.05 else f"{t['their_delta_ppw']:+.1f} for them"
     drops, cut = spots.cut(t)
-    odds = accept_note(t)
-    text = (f"offer {t['rival'] or 'them'} your {', '.join(t['give'])} for {', '.join(t['get'])} "
-            f"(+{t['my_delta_ppw']:.1f} pts/wk for you, {them}{odds}){cut}")
+    text = (f"offer {t['rival'] or 'them'} your {', '.join(t['give'])} for {', '.join(t['get'])}: "
+            f"+{t['my_delta_ppw']:.1f}/wk for you, {them}{accept_note(t)}")
+    detail = []
+    if cut:
+        detail.append(cut.strip("; "))
     if t.get("after_line"):
-        text += f"; {t['after_line']}"
+        detail.append(t["after_line"])
     if t.get("fallback"):
-        text += f"; {t['fallback']['text']}"
-    text += executes_note((lg or {}).get("deadlines") or {}, "if he accepts today it executes")
+        detail.append(t["fallback"]["text"])
+    ex = executes_note((lg or {}).get("deadlines") or {}, "if he accepts today it executes")
+    if ex:
+        detail.append(ex[2:])
     if push:
-        text += " " + push_line(t)
+        detail.append(push_line(t))
     thin_after = [r["pos"] for r in t.get("rival_after") or [] if any(st["wire"] for st in r["starters"]) or not r["starters"]]
     return {"kind": "trade", "id": f"trade:{slug('-'.join(t['get']))}", "label": "Trade (do this one)" if push else f"Trade ({trade_tag(t)})",
             "worth": sendable(t), "push": push, "rival": t.get("rival"), "give": list(t["give"]), "get": list(t["get"]), "warn": warn,
-            "drops": drops, "text": text, "thin_after": thin_after, "p_accept": t.get("p_accept")}
+            "drops": drops, "text": text, "detail": detail, "thin_after": thin_after, "p_accept": t.get("p_accept")}
 
 
 def _trade_items(lg: dict, spots: Spots, pushed: list[dict]) -> list[dict]:
@@ -776,9 +840,14 @@ def voice_lint(reads: dict) -> list[str]:
     return out
 
 
+def detail_line(x: dict) -> str:
+    """The grey line under a row, joined: "+3 pts this week · waivers: priority #7, lands Wed 1:00 AM"."""
+    return " · ".join(d for d in x.get("detail") or [] if d)
+
+
 def hold_line(x: dict) -> str:
     """A hurt player kept on the bench: not a step, a footnote under the list, with Claude's note if there is one."""
-    line = x["text"]
+    line = x["text"] + (f" ({detail_line(x)})" if detail_line(x) else "")
     if x.get("ruling") == "skip":
         line = f"~~{line}~~"
     if x.get("ruling_note"):
@@ -792,6 +861,8 @@ def item_line(x: dict) -> str:
     if x.get("ruling") == "skip":
         label, text = f"~~{label}~~", f"~~{text}~~"
     line = f"**{label}:** {text}"
+    if detail_line(x) and x.get("ruling") != "skip":
+        line += f" _({detail_line(x)})_"
     if x.get("warn") and x.get("ruling") != "skip":
         line += f" — {'; '.join(x['warn'])}"
     if x.get("ruling_note"):

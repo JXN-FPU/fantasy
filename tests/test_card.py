@@ -27,6 +27,11 @@ def trade(get, give, rival="Rival", mine=1.5, theirs=0.5, sendable=True, why=())
             "their_delta_ppw": theirs, "sendable": sendable, "why": list(why), "market_give": 100, "market_get": 90}
 
 
+def full(x):
+    """A row's click and its detail line together, for assertions on wording that moved under the row."""
+    return x["text"] + " " + report.detail_line(x)
+
+
 def ids(lg, reads=None):
     return [x["id"] for x in report.apply_reads(report.todos(lg), reads)]
 
@@ -85,7 +90,7 @@ def test_open_offers_show_up_as_a_row():
     lg = league(outgoing_trades=[{"give": ["Drake Maye"], "get": ["Jameson Williams"], "rival": "Them",
                                   "hours_left": 22.0}])
     row = by_id(lg)["sent:jameson-williams"]
-    assert "Jameson Williams" in row["text"] and "22h left" in row["text"]
+    assert "Jameson Williams" in row["text"] and "22h left" in full(row)
 
 
 def test_skip_ruling_marks_the_row_and_carries_the_reason():
@@ -172,7 +177,7 @@ def test_cover_row_names_a_free_agent_over_a_waiver_claim():
 def test_cover_row_says_claim_when_only_a_waiver_claim_covers():
     lg = cover_league(waiver_rank=3)
     lg["waivers"][0]["on_waivers"] = True
-    text = by_id(lg)["cover:k"]["text"]
+    text = full(by_id(lg)["cover:k"])
     assert "claim" in text and "priority #3" in text and "Backup K" in text
     assert "add Backup K" not in text
 
@@ -194,14 +199,14 @@ def test_cover_row_uses_the_open_spot_and_the_pickup_above_does_not_share_a_drop
                           "delta_week": 4.0, "week_slot": "WR", "slot": "WR", "why": [], "bid": 1, "mu_week": 12.0,
                           "mu_ros": 12.0, "on_waivers": False})
     rows = by_id(lg)
-    assert "open bench spot" in rows["waiver:hot-wr"]["text"]
+    assert "open bench spot" in full(rows["waiver:hot-wr"])
     assert "drop Cheap WR" in rows["cover:k"]["text"]  # the spot above is spent; the cover needs a drop of its own
 
 
 def test_cover_pickup_is_not_added_twice_and_a_waiver_row_at_the_position_is_the_cover():
     lg = cover_league(open_spots=2, open_spot_adds=[{"name": "Backup K", "pos": "K", "why": "best K on the wire"}])
     rows = by_id(lg)
-    assert "open bench spot" in rows["cover:k"]["text"]
+    assert "open bench spot" in full(rows["cover:k"])
     assert "waiver:backup-k" not in rows  # the cover row already spent a spot on him
     # A waiver row above that brings in a K already covers the slot.
     lg = cover_league()
@@ -301,10 +306,11 @@ def test_each_verdict_is_a_row_with_the_numbers_in_words():
                           injury("Back Guy", "activate", weeks_out=1, return_week=4)])
     rows = by_id(lg)
     assert rows["injury:ankle-guy"]["kind"] == "hold" and rows["injury:ankle-guy"]["label"] == "Holding"
-    assert rows["injury:ankle-guy"]["text"] == "Ankle Guy (RB) out ~4 wks, back wk 7, 10 games at ~14/g on return"
-    assert rows["injury:knee-guy"]["text"] == "move Knee Guy (RB) to IR (out the season), then add Pickup (RB, +1.2/wk)"
+    assert rows["injury:ankle-guy"]["text"] == "Ankle Guy (RB) out ~4 wks, back wk 7" and rows["injury:ankle-guy"]["detail"] == ["10 games at ~14/g on return"]
+    assert rows["injury:knee-guy"]["text"] == "move Knee Guy (RB) to IR, then add Pickup (RB)" and rows["injury:knee-guy"]["detail"] == ["out the season", "Pickup: +1.2/wk"]
     assert rows["injury:done-guy"]["label"] == "Drop"
-    assert rows["injury:done-guy"]["text"] == "drop Done Guy (RB): out the season, worth ~29 pts the rest of the way; add Pickup (RB, +1.2/wk)"
+    assert rows["injury:done-guy"]["text"] == "drop Done Guy (RB); add Pickup (RB)"
+    assert rows["injury:done-guy"]["detail"] == ["out the season, worth ~29 pts the rest of the way", "Pickup: +1.2/wk"]
     assert "the offer to Them for Star ships Sell Guy (RB)" in rows["injury:sell-guy"]["text"] and rows["injury:sell-guy"]["trade_ids"] == ["trade:star"]
     assert rows["injury:back-guy"]["label"] == "Activate" and rows["injury:back-guy"]["text"].startswith("move Back Guy (RB) off IR")
 
@@ -351,8 +357,8 @@ def test_the_market_keeps_a_rookie_the_market_would_pay_for_off_the_drop_list():
                         {**player("WR Four", ros=3.0), "market": market(300)}],
                 waivers=[{"name": "Now Guy", "pos": "WR", "streamer": False, "delta_week": 3.0, "delta_over_starter": 0.5, "week_slot": "WR", "on_waivers": False}])
     assert report._drop_order(lg) == ["WR Four", "Rookie RB"]
-    text = by_id(lg)["waiver:now-guy"]["text"]
-    assert "drop WR Four (market 300, 3.0/wk)" in text and "Rookie RB (market 2400, 2.0/wk" in text
+    text = full(by_id(lg)["waiver:now-guy"])
+    assert "; drop WR Four" in text and "WR Four: market 300, 3.0/wk" in text and "Rookie RB (market 2400, 2.0/wk" in text
 
 
 def test_the_market_penalty_does_not_save_a_buried_player():
@@ -378,8 +384,8 @@ def test_a_handcuff_for_my_rb1_is_not_the_cheapest_cut():
                 handcuffs=[{"starter": "Starter RB", "handcuff": "Backup RB", "owner_team_id": 1, "est_value": 2.0}],
                 waivers=[{"name": "Now Guy", "pos": "WR", "streamer": False, "delta_week": 3.0, "delta_over_starter": 0.5, "week_slot": "WR", "on_waivers": False}])
     assert report._drop_order(lg) == ["WR Four", "Backup RB"]
-    text = by_id(lg)["waiver:now-guy"]["text"]
-    assert "drop WR Four" in text and "Backup RB (3.0/wk; handcuff for Starter RB, not a cut)" in text
+    text = full(by_id(lg)["waiver:now-guy"])
+    assert "; drop WR Four" in text and "Backup RB (3.0/wk; handcuff for Starter RB, not a cut)" in text
 
 
 def test_a_body_on_bye_this_week_is_the_cheaper_cut():
@@ -442,7 +448,7 @@ def test_an_open_bench_spot_is_a_row_naming_who_fills_it():
     lg["open_spots"] = 1
     lg["open_spot_adds"] = [{"name": "Seth McGowan", "pos": "RB", "kind": "handcuff", "why": "handcuff for Jonathan Taylor"}]
     row = by_id(lg)["open:seth-mcgowan"]
-    assert row["label"] == "Open spot" and row["text"] == "add Seth McGowan (RB, handcuff for Jonathan Taylor) to the open bench spot"
+    assert row["label"] == "Open spot" and row["text"] == "add Seth McGowan (RB) to the open bench spot" and row["detail"] == ["handcuff for Jonathan Taylor"]
 
 
 # ---------- ESPN's position cap on trade rows ----------
@@ -466,7 +472,7 @@ def capped_trade(**kw):
 def test_trade_row_names_the_drop_the_cap_forces():
     row = by_id(capped_league(trades=[capped_trade()]))["trade:garrett-wilson"]
     assert row["drops"] == ["WR Six"]
-    assert "drop WR Six in the trade screen (ESPN caps WR at 6)" in row["text"]
+    assert "drop WR Six in the trade screen (ESPN caps WR at 6)" in full(row)
 
 
 def test_a_waiver_drop_that_clears_the_cap_spares_the_trade_a_second_cut():
@@ -474,7 +480,7 @@ def test_a_waiver_drop_that_clears_the_cap_spares_the_trade_a_second_cut():
     w = {"name": "Pickup RB", "pos": "RB", "streamer": False, "delta_week": 2.0, "delta_over_starter": 2.0, "week_slot": "RB", "slot": "RB"}
     rows = by_id(capped_league(trades=[capped_trade()], waivers=[w]))
     assert "drop WR Six" in rows["waiver:pickup-rb"]["text"]
-    assert rows["trade:garrett-wilson"]["drops"] == [] and "trade screen" not in rows["trade:garrett-wilson"]["text"]
+    assert rows["trade:garrett-wilson"]["drops"] == [] and "trade screen" not in full(rows["trade:garrett-wilson"])
 
 
 def test_a_waiver_pickup_at_the_capped_position_moves_the_cut_to_the_next_body():
@@ -487,14 +493,14 @@ def test_a_waiver_pickup_at_the_capped_position_moves_the_cut_to_the_next_body()
 
 def test_a_trade_row_without_cap_data_is_unchanged():
     row = by_id(league(trades=[trade(["Kai"], ["Maye"])]))["trade:kai"]
-    assert row["drops"] == [] and "trade screen" not in row["text"]
+    assert row["drops"] == [] and "trade screen" not in full(row)
 
 
 def test_incoming_offer_says_what_accepting_would_cut():
     t = {"rival": "Rival", "give": ["RB Two"], "get": ["Garrett Wilson"], "my_delta_ppw": 1.2, "their_delta_ppw": 0.3, "verdict": "accept",
          "why": [], "drops": [{"name": "WR Six", "pos": "WR", "cap": 6}]}
     row = by_id(capped_league(incoming_trades=[t]))["offer:garrett-wilson"]
-    assert "accepting means dropping WR Six (6-WR cap)" in row["text"]
+    assert "accepting means dropping WR Six (6-WR cap)" in full(row)
 
 
 def test_an_activation_names_the_body_the_stash_added_when_it_is_the_drop():
@@ -502,8 +508,8 @@ def test_an_activation_names_the_body_the_stash_added_when_it_is_the_drop():
     row = injury("Back Guy", "activate", weeks_out=1, return_week=4)
     row["stash"] = {"left_days": None, "stashed": "2026-10-03", "added": ["Bench WR"]}
     lg = league(injuries=[row])
-    text = by_id(lg)["injury:back-guy"]["text"]
-    assert text.endswith("; drop Bench WR, added when he was stashed Oct 3 to make room")
+    act = by_id(lg)["injury:back-guy"]
+    assert act["text"].endswith("; drop Bench WR to make room") and "Bench WR, added when he was stashed Oct 3" in report.detail_line(act)
     # a different drop, or a stash nobody came in on, says nothing extra
     row["stash"] = {"left_days": None, "stashed": "2026-10-03", "added": ["Someone Else"]}
     assert by_id(league(injuries=[row]))["injury:back-guy"]["text"].endswith("; drop Bench WR to make room")
@@ -632,8 +638,8 @@ def test_the_waiver_row_names_the_next_body_in_case_he_is_gone():
     lg = league(open_spots=2, waivers=[waiver("Now Guy"), waiver("Second Guy", delta_week=2.0),
                                       waiver("Up Guy", delta_week=0.5, delta_over_starter=1.5), waiver("Up Two", delta_week=0.5, delta_over_starter=1.1)])
     rows = by_id(lg)
-    assert rows["waiver:now-guy"]["text"].endswith("(there is an open bench spot); if he is gone, Second Guy (WR, +2 this week)")
-    assert rows["waiver:up-guy"]["text"].endswith("(there is an open bench spot); if he is gone, Up Two (WR, +1.1/wk)")
+    assert rows["waiver:now-guy"]["detail"][-2:] == ["there is an open bench spot", "if he is gone, Second Guy (WR, +2 this week)"]
+    assert rows["waiver:up-guy"]["detail"][-2:] == ["there is an open bench spot", "if he is gone, Up Two (WR, +1.1/wk)"]
     assert "waiver:second-guy" not in rows and "waiver:up-two" not in rows
 
 
@@ -649,25 +655,28 @@ def test_a_locked_body_is_the_drop_only_when_nobody_else_can_go():
 
 def test_waiver_row_carries_the_kickoff_day():
     lg = league(open_spots=1, waivers=[waiver(kickoff_day="Thu")])
-    assert by_id(lg)["waiver:now-guy"]["text"] == "add Now Guy (WR) and start him at WR (+3 pts this week), set by Thu (there is an open bench spot)"
+    row = by_id(lg)["waiver:now-guy"]
+    assert row["text"] == "add Now Guy (WR) and start him at WR" and row["detail"] == ["+3 pts this week, set by Thu", "there is an open bench spot"]
     lg = league(open_spots=1, waivers=[waiver(delta_week=0.5, delta_over_starter=1.2, kickoff_day="Thu")])
-    assert by_id(lg)["waiver:now-guy"]["text"] == "add Now Guy (WR), +1.2/wk over your WR, set by Thu (there is an open bench spot)"
+    row = by_id(lg)["waiver:now-guy"]
+    assert row["text"] == "add Now Guy (WR)" and row["detail"] == ["+1.2/wk over your WR, set by Thu", "there is an open bench spot"]
     lg = league(waivers=[waiver("Texans D/ST", pos="D/ST", streamer=True, delta_over_starter=2.6, kickoff_day="Thu")])
-    assert by_id(lg)["stream:texans-d-st"]["text"] == "swap in Texans D/ST at D/ST (+2.6 this week), set by Thu"
+    row = by_id(lg)["stream:texans-d-st"]
+    assert row["text"] == "swap in Texans D/ST at D/ST" and row["detail"] == ["+2.6 this week, set by Thu"]
 
 
 def test_waiver_row_without_a_kickoff_day_reads_as_before():
     lg = league(open_spots=1, waivers=[waiver()])
-    assert by_id(lg)["waiver:now-guy"]["text"] == "add Now Guy (WR) and start him at WR (+3 pts this week) (there is an open bench spot)"
+    assert by_id(lg)["waiver:now-guy"]["detail"] == ["+3 pts this week", "there is an open bench spot"]
     lg = league(open_spots=1, waivers=[waiver(kickoff_day="Sun")])
-    assert by_id(lg)["waiver:now-guy"]["text"] == "add Now Guy (WR) and start him at WR (+3 pts this week) (there is an open bench spot)"
+    assert by_id(lg)["waiver:now-guy"]["detail"] == ["+3 pts this week", "there is an open bench spot"]
 
 
 def test_trade_row_prints_p_accept_next_to_the_word():
     t = {**trade(["Kai"], ["Maye"]), "p_accept": 0.62, "accept_word": "he'd likely take it"}
-    assert "(+1.5 pts/wk for you, +0.5 for them, he'd likely take it, p(accept) 0.62)" in by_id(league(trades=[t]))["trade:kai"]["text"]
+    assert ": +1.5/wk for you, +0.5 for them, he'd likely take it (62%)" in by_id(league(trades=[t]))["trade:kai"]["text"]
     bare = by_id(league(trades=[trade(["Kai"], ["Maye"])]))["trade:kai"]["text"]
-    assert bare.startswith("offer Rival your Maye for Kai (+1.5 pts/wk for you, +0.5 for them)") and "p(accept)" not in bare
+    assert bare.startswith("offer Rival your Maye for Kai: +1.5/wk for you, +0.5 for them") and "%" not in bare
 
 
 def test_detail_tables_show_the_game_and_the_usage_next_to_the_projection():
@@ -692,9 +701,22 @@ def test_an_accepted_trade_row_says_when_it_processes_and_what_opens_and_the_lin
     rows = by_id(lg)
     row = rows["sent:new-rb"]
     assert row["label"] == "Accepted" and "processes Wed 8:05 AM" in row["text"]
-    assert "New RB on your roster for Sunday, Old RB, Old WR off it" in row["text"]
-    assert "frees 1 bench spot when it processes, not before: then add Wire RB (RB, +1.2/wk)" in row["text"]
+    assert "New RB on your roster for Sunday, Old RB, Old WR off it" in report.detail_line(row)
+    assert "1 bench spot open then: add Wire RB (RB)" in row["text"] and "Wire RB: +1.2/wk" in report.detail_line(row)
+    assert report.words(row["text"]) <= report.MAX_ROW_WORDS
     assert "New RB: bench → RB (once the accepted trade processes)" in rows["lineup"]["text"]
     # a plain open offer is unchanged
     lg2 = league(outgoing_trades=[{"give": ["A"], "get": ["B"], "rival": "Them", "hours_left": 5.0}])
     assert by_id(lg2)["sent:b"]["label"] == "Already sent"
+
+
+def test_every_row_is_one_short_click_with_the_reasons_underneath():
+    """Oct 13: the Accepted row ran to 90 words on a phone. A row's `text` is the click, under MAX_ROW_WORDS; the
+    reasons, clocks and numbers ride in `detail`. The lineup row is the one exception (it is a list of moves)."""
+    from tests.test_ledger import _rich_league
+    for lg in (_rich_league(), league(outgoing_trades=[{"give": ["A", "B", "C"], "get": ["D"], "rival": "Them", "accepted": True, "process_ts": 1}],
+                                     trade_spots_after=2, trade_adds_after=[{"name": "X", "pos": "RB", "why": "+1/wk"}, {"name": "Y", "pos": "QB", "why": "depth"}])):
+        for x in report.todos(lg):
+            if x["kind"] != "lineup":
+                assert report.words(x["text"]) <= report.MAX_ROW_WORDS, (x["id"], x["text"])
+                assert isinstance(x.get("detail", []), list)

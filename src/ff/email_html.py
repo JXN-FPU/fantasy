@@ -184,8 +184,12 @@ def _todo_rows(lg: dict, r: dict) -> tuple[str, bool]:
             body = _e(t["text"])
         if skip:
             body = f'<span style="text-decoration:line-through;color:{MUTED}">{body}</span>'
-        elif t.get("warn"):
-            body += f'<div style="color:{TONES["bad"][1]};font-size:11px;margin-top:2px">{_e("; ".join(t["warn"]))}</div>'
+        else:
+            # the reasons, clocks and numbers behind the click: one grey line, never in the sentence itself
+            if report.detail_line(t):
+                body += f'<div style="color:{MUTED};font-size:12px;margin-top:2px">{_e(report.detail_line(t))}</div>'
+            if t.get("warn"):
+                body += f'<div style="color:{TONES["bad"][1]};font-size:11px;margin-top:2px">{_e("; ".join(t["warn"]))}</div>'
         if t.get("ruling_note"):
             fg = MUTED if skip else TONES["warn"][1]
             body += f'<div style="color:{fg};font-size:12px;margin-top:3px">{_e(t["ruling_note"])}</div>'

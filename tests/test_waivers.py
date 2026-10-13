@@ -7,7 +7,6 @@ What the model does with priority today is wording: `rank_free_agents` tags each
 status, the packet carries `waiver_rank` and a `faab_remaining` of None, and the checklist row says `claim (waivers,
 you are priority #N)` or `add`. Nothing prices the cost of spending priority #N; that is TODO D3, not a bug here.
 """
-import re
 from types import SimpleNamespace
 
 from ff import report
@@ -15,7 +14,7 @@ from ff.email_html import render_email
 from ff.model.waivers import faab_bid, rank_free_agents
 from ff.sources import espn
 from tests.conftest import P
-from tests.test_card import by_id, league
+from tests.test_card import by_id, full, league
 
 # ---------- FAAB sizing, as behaviour ----------
 
@@ -159,8 +158,8 @@ def _waiver(name, pos="RB", d_week=0.0, d_start=0.0, on_waivers=False, bid=0, st
 
 def test_a_start_now_pickup_on_waivers_is_a_claim_with_my_priority():
     lg = league(waivers=[_waiver("Bassett", d_week=3.0, on_waivers=True)], waiver_rank=7, faab_remaining=None)
-    text = by_id(lg)["waiver:bassett"]["text"]
-    assert text.startswith("claim (waivers, you are priority #7) Bassett (RB) and start him at RB")
+    text = full(by_id(lg)["waiver:bassett"])
+    assert text.startswith("claim Bassett (RB) and start him at RB") and "waivers: you are priority #7" in text
     lg = league(waivers=[_waiver("Bassett", d_week=3.0, on_waivers=False)], waiver_rank=7, faab_remaining=None)
     assert by_id(lg)["waiver:bassett"]["text"].startswith("add Bassett (RB) and start him at RB")
 
@@ -170,21 +169,21 @@ def test_an_upgrade_pickup_on_waivers_is_a_claim_with_my_priority():
     lg = league(waivers=[_waiver("Later Guy", d_start=2.0, on_waivers=True)], waiver_rank=4, faab_remaining=None)
     row = by_id(lg)["waiver:later-guy"]
     assert row["kind"] == "waiver_up"
-    assert row["text"].startswith("claim (waivers, you are priority #4) Later Guy (RB), +2.0/wk over your RB")
+    assert row["text"].startswith("claim Later Guy (RB)") and row["detail"][:2] == ["+2.0/wk over your RB", "waivers: you are priority #4, lands on waiver day"]
     lg = league(waivers=[_waiver("Later Guy", d_start=2.0, on_waivers=False)], waiver_rank=4, faab_remaining=None)
-    assert by_id(lg)["waiver:later-guy"]["text"].startswith("add Later Guy (RB), +2.0/wk over your RB")
+    assert by_id(lg)["waiver:later-guy"]["text"].startswith("add Later Guy (RB)") and by_id(lg)["waiver:later-guy"]["detail"][0] == "+2.0/wk over your RB"
 
 
 def test_a_claim_with_no_priority_known_still_says_it_is_a_claim():
     lg = league(waivers=[_waiver("Bassett", d_week=3.0, on_waivers=True)], waiver_rank=None, faab_remaining=None)
-    text = by_id(lg)["waiver:bassett"]["text"]
-    assert text.startswith("claim (waivers) Bassett (RB)") and "priority" not in text
+    text = full(by_id(lg)["waiver:bassett"])
+    assert text.startswith("claim Bassett (RB)") and "waivers: lands on waiver day" in text and "priority" not in text
 
 
 def test_a_faab_league_puts_the_bid_on_the_claim_instead_of_the_priority():
     lg = league(waivers=[_waiver("Bassett", d_week=3.0, on_waivers=True, bid=7)], waiver_rank=7, faab_remaining=40)
-    text = by_id(lg)["waiver:bassett"]["text"]
-    assert text.startswith("claim (waivers, bid $7) Bassett (RB)") and "priority" not in text
+    text = full(by_id(lg)["waiver:bassett"])
+    assert text.startswith("claim Bassett (RB)") and "waivers: bid $7" in text and "priority" not in text
     # a free agent costs nothing to click whatever the budget says
     lg = league(waivers=[_waiver("Bassett", d_week=3.0, on_waivers=False, bid=7)], waiver_rank=7, faab_remaining=40)
     assert by_id(lg)["waiver:bassett"]["text"].startswith("add Bassett (RB)")
@@ -192,10 +191,10 @@ def test_a_faab_league_puts_the_bid_on_the_claim_instead_of_the_priority():
 
 def test_a_streamer_on_waivers_says_the_swap_lands_on_waiver_day():
     lg = league(waivers=[_waiver("Wire K", pos="K", d_start=2.0, on_waivers=True, streamer=True)], waiver_rank=5)
-    text = by_id(lg)["stream:wire-k"]["text"]
-    assert text.startswith("swap in Wire K at K (+2.0 this week)") and text.endswith("(he is on waivers, so the claim lands on waiver day)")
+    row = by_id(lg)["stream:wire-k"]
+    assert row["text"] == "swap in Wire K at K" and row["detail"] == ["+2.0 this week", "waivers: you are priority #5, lands on waiver day"]
     lg = league(waivers=[_waiver("Wire K", pos="K", d_start=2.0, on_waivers=False, streamer=True)], waiver_rank=5)
-    assert by_id(lg)["stream:wire-k"]["text"] == "swap in Wire K at K (+2.0 this week)"
+    assert by_id(lg)["stream:wire-k"]["text"] == "swap in Wire K at K" and by_id(lg)["stream:wire-k"]["detail"] == ["+2.0 this week"]
 
 
 # ---------- a priority league end to end ----------
@@ -221,9 +220,10 @@ def test_a_priority_league_carries_the_rank_and_no_faab_through_packet_markdown_
     rows = report.todos(blk)
     for r in rows:
         if r["kind"] in ("waiver", "waiver_up"):
-            assert "$" not in r["text"]
-            assert re.match(r"claim \(waivers, you are priority #6(, lands [^)]+)?\) ", r["text"]) or r["text"].startswith("add ")
-            assert ("of future claims" in r["text"]) == r["text"].startswith("claim")  # the priority is priced on a claim only
+            assert "$" not in full(r)
+            assert r["text"].startswith("claim ") or r["text"].startswith("add ")
+            assert ("waivers: you are priority #6" in report.detail_line(r)) == r["text"].startswith("claim")
+            assert ("of future claims" in report.detail_line(r)) == r["text"].startswith("claim")  # the priority is priced on a claim only
     packet = {"version": 3, "generated": "2026-09-10T07:00:00", "season": 2026,
               "shared": {"injury_watchlist": [], "exposure": {}, "trending_adds": [], "usage_error": None, "unmatched_ids": []},
               "leagues": [blk]}
@@ -248,18 +248,18 @@ def _rolling(**kw):
 def test_a_claim_in_a_rolling_league_prices_the_priority_it_spends():
     """Priority #2 of 10 with 12 weeks left: the row says what claiming now gets against the future claims it gives
     up, and the two numbers are the model's (`priority_cost`), not a guess in prose."""
-    text = by_id(_rolling())["waiver:big-guy"]["text"]
-    assert text.startswith("claim (waivers, you are priority #2) Big Guy (RB), +2.1/wk over your RB")
-    assert "; worth it: +2.1/wk now vs ~0.7/wk of future claims given up" in text
+    text = full(by_id(_rolling())["waiver:big-guy"])
+    assert text.startswith("claim Big Guy (RB)") and "+2.1/wk over your RB" in text and "you are priority #2" in text
+    assert "worth it: +2.1/wk now vs ~0.7/wk of future claims given up" in text
 
 
 def test_a_small_upgrade_says_pass_when_the_priority_is_worth_more():
     """A one-week fill-in at priority #2: the start-now row spreads his week over the season and the priority wins."""
     lg = _rolling()
     lg["waivers"].insert(0, _waiver("Fill In", d_week=3.6, d_start=0.0, on_waivers=True))
-    text = by_id(lg)["waiver:fill-in"]["text"]
-    assert text.startswith("claim (waivers, you are priority #2) Fill In (RB) and start him at RB (+4 pts this week)")
-    assert "; pass: you'd give up priority #2 for +0.3/wk (~0.7/wk of future claims)" in text
+    text = full(by_id(lg)["waiver:fill-in"])
+    assert text.startswith("claim Fill In (RB) and start him at RB") and "+4 pts this week" in text
+    assert "pass: you'd give up priority #2 for +0.3/wk (~0.7/wk of future claims)" in text
 
 
 def test_a_reverse_standings_league_shows_no_cost():
@@ -268,14 +268,16 @@ def test_a_reverse_standings_league_shows_no_cost():
     for order in ("reset", None):
         lg = _rolling()
         lg["settings"]["waiver_order"] = order
-        text = by_id(lg)["waiver:big-guy"]["text"]
-        assert text == "claim (waivers, you are priority #2) Big Guy (RB), +2.1/wk over your RB; drop Bench WR; if he is gone, Next Guy (RB, +1.5/wk)", (order, text)
+        row = by_id(lg)["waiver:big-guy"]
+        assert row["text"] == "claim Big Guy (RB); drop Bench WR", (order, row["text"])
+        assert row["detail"] == ["+2.1/wk over your RB", "waivers: you are priority #2, lands on waiver day", "if he is gone, Next Guy (RB, +1.5/wk)"], (order, row["detail"])
 
 
 def test_a_free_agent_row_is_untouched_by_the_priority_value():
     lg = _rolling()
     lg["waivers"][0]["on_waivers"] = False
-    assert by_id(lg)["waiver:big-guy"]["text"] == "add Big Guy (RB), +2.1/wk over your RB; drop Bench WR; if he is gone, Next Guy (RB, +1.5/wk)"
+    row = by_id(lg)["waiver:big-guy"]
+    assert row["text"] == "add Big Guy (RB); drop Bench WR" and row["detail"] == ["+2.1/wk over your RB", "if he is gone, Next Guy (RB, +1.5/wk)"]
 
 
 def test_priority_cost_is_the_rolling_formula():

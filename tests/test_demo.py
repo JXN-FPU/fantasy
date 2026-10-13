@@ -17,7 +17,7 @@ def test_briefing_demo(tmp_path):
     md = out.read_text()
     assert "Demo League" in md and "## Waivers" in md and "## League odds" in md
     assert "The Tuesday Regrets offers " in md  # incoming offer verdict is the first checklist item
-    assert "**IR:** move " in md and " to IR (out " in md and "**Out:**" in md  # the hurt-player row and the timelines
+    assert "**IR:** move " in md and " to IR" in md and "**Out:**" in md  # the hurt-player row and the timelines
     assert not re.search(r"\b(RB|WR|TE|QB)\d_\d\b|FA_", md), "demo names should read like people, not fixture codes"
 
 

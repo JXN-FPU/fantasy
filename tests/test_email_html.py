@@ -29,7 +29,7 @@ def test_render_email(monkeypatch):
     assert "Bill &amp; Ted&#x27;s League" in html and "O&#x27;Brien&#x27;s Boys" in html
     assert "Coin flip, lineup is fine." in html and "Want to swap RBs?" in html and "Paste to O&#x27;Brien" in html
     assert "limited Friday, expected to play" in html
-    assert " to IR (out " in html and ">IR<" in html  # the hurt-player row, with its verdict as the badge
+    assert " to IR" in html and ">IR<" in html and "out ~" in html  # the hurt-player row, with its verdict as the badge, the horizon on the grey line
     for todo in report.todos(p["leagues"][0]):
         if not todo.get("moves"):
             assert escape(todo["text"])[:30] in html
@@ -221,12 +221,12 @@ def test_the_card_says_set_by_thu_and_the_number_behind_the_accept_word(monkeypa
     assert f"{star['name']}: bench → QB, set by Thu" in rows["lineup"]["moves"]  # the demo benches the star; he plays Thursday
     assert not any("set by" in m for m in rows["lineup"]["moves"] if star["name"] not in m)
     trade_rows = [x for x in rows.values() if x["kind"] == "trade"]
-    assert trade_rows and all(f"p(accept) {x['p_accept']:.2f}" in x["text"] for x in trade_rows)
+    assert trade_rows and all(f"({x['p_accept']:.0%})" in x["text"] for x in trade_rows)
     html = render_email(p)
     assert escape(f"{star['name']}: bench → QB, set by Thu").replace(" → ", "") in html.replace(' <span style="color:#6b7280">→</span> ', "")
-    assert "p(accept) 0." in html
+    assert "%)" in html
     md = report.render(p)
-    assert "set by Thu" in md and "p(accept) 0." in md
+    assert "set by Thu" in md and "%)" in md
 
 
 def test_the_detail_shows_opponent_implied_total_and_usage_next_to_the_projection(monkeypatch):
