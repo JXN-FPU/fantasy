@@ -87,6 +87,43 @@ def _hours_left(ms, now=None) -> float | None:
     return round((datetime.fromtimestamp(ms / 1000, tz=UTC) - now).total_seconds() / 3600, 1)
 
 
+def apply_accepted_trades(by_team: dict, pending: list[dict], my_id: int | None) -> list[dict]:
+    """A trade both sides have accepted is a done deal waiting on ESPN's processing clock (the league's review
+    period, a day or so): the players sit on their old rosters until then but play for their new ones on Sunday.
+    Oct 13: the Hubbard trade was accepted Tuesday morning and processed Wednesday 8:05 AM; until this, the card
+    named a player in it as the drop for a claim (ESPN refuses: he is in a pending trade) and moved another into
+    Sunday's lineup. Move them now, in place, so the lineup, the injury rule, the wire and the scan see each roster
+    as it will be; each moved player lands on the bench with `pending_trade` "in" (joins my roster) or "out". Today's
+    open spots are still counted on today's bodies (`analyze_league`): ESPN keeps the roster full until it processes.
+    Returns one {id, in, out, process_ts} per trade applied (names)."""
+    if my_id is None:
+        return []
+    by_id = {p.espn_id: p for ps in by_team.values() for p in ps}
+    moves = []
+    for tx in pending:
+        if not tx.get("accepted"):
+            continue
+        rid = tx.get("rival_team_id")
+        ins, outs = [], []
+        for pid in tx.get("get") or []:
+            p = by_id.get(pid)
+            if p is None or p.fantasy_team_id == my_id:
+                continue
+            by_team[p.fantasy_team_id].remove(p)
+            p.fantasy_team_id, p.slot, p.pending_trade = my_id, "BE", "in"
+            by_team[my_id].append(p); ins.append(p.name)
+        for pid in tx.get("give") or []:
+            p = by_id.get(pid)
+            if p is None or p.fantasy_team_id != my_id or rid is None:
+                continue
+            by_team[my_id].remove(p)
+            p.fantasy_team_id, p.slot, p.pending_trade = rid, "BE", "out"
+            by_team[rid].append(p); outs.append(p.name)
+        if ins or outs:
+            moves.append({"id": tx.get("id"), "in": ins, "out": outs, "process_ts": tx.get("process_ts")})
+    return moves
+
+
 def analyze_league(snap: dict, xw: Crosswalk, fp_index: dict, inj: dict, trending: dict, usage_sig: dict,
                    overrides: dict | None = None, sims: int = 3000, sl_proj: dict | None = None, lines: dict | None = None,
                    now=None, skips: dict | None = None, pushes: dict | None = None, offer_history: dict | None = None,
@@ -112,6 +149,8 @@ def analyze_league(snap: dict, xw: Crosswalk, fp_index: dict, inj: dict, trendin
     by_team: dict[int, list[PlayerProj]] = defaultdict(list)
     for p in rostered:
         by_team[p.fantasy_team_id].append(p)
+    # an accepted trade ESPN has not processed yet: the rosters as they will be on Sunday
+    pending_moves = apply_accepted_trades(by_team, snap.get("pending_trades") or [], my_id)
     teams = {t["team_id"]: t for t in snap["teams"]}
 
     # matchup + opponent
@@ -239,15 +278,28 @@ def analyze_league(snap: dict, xw: Crosswalk, fp_index: dict, inj: dict, trendin
                                s.get("ir_slots", 0), waivers, trades, values,
                                {p.espn_id for ps in win_lu.assignment.values() for p in ps}, repl, cuffs, ir_mem) if my_id else []
 
-    # bench spots already open (a drop made, nobody added): name who fills each one, after the hurt-player rows
-    open_spots = max(roster_max - len([p for p in mine if p.slot != "IR"]), 0) if my_id and s.get("bench_slots") else 0
+    # bench spots already open (a drop made, nobody added): name who fills each one, after the hurt-player rows.
+    # `mine` is the roster after any accepted trade; the bodies ESPN counts today are the ones before it, and a spot
+    # the trade itself needs (a 1-for-2 I receive) is not open today either. The spots it frees open when it
+    # processes (`trade_spots_after`, with who fills them), never on today's rows.
+    n_in = sum(len(m["in"]) for m in pending_moves); n_out = sum(len(m["out"]) for m in pending_moves)
+    bodies_after = len([p for p in mine if p.slot != "IR"])
+    has_bench = bool(my_id and s.get("bench_slots"))
+    open_after = max(roster_max - bodies_after, 0) if has_bench else 0
+    open_spots = max(min(roster_max - (bodies_after + n_out - n_in), open_after), 0) if has_bench else 0
+    spots_after = open_after - open_spots
     used = {r["add"]["name"] for r in injuries if r.get("add")}
-    open_adds = []
+    open_adds, after_adds = [], []
     for _ in range(open_spots):
         a = fill_spot(None, waivers, cuffs, used)
         if not a:
             break
         open_adds.append(a); used.add(a["name"])
+    for _ in range(spots_after):
+        a = fill_spot(None, waivers, cuffs, used)
+        if not a:
+            break
+        after_adds.append(a); used.add(a["name"])
 
     # offers other managers sent me (and mine still open), from ESPN's pending transactions. A trade both sides have
     # accepted sits in the same view until ESPN processes it (the league's review period); it is a done deal waiting
@@ -309,6 +361,7 @@ def analyze_league(snap: dict, xw: Crosswalk, fp_index: dict, inj: dict, trendin
         "replacement": repl,
         "waivers": waivers, "handcuffs": cuffs, "trades": trades, "injuries": injuries,
         "open_spots": open_spots, "open_spot_adds": open_adds, "ir_events": ir_events,
+        "pending_moves": pending_moves, "trade_spots_after": spots_after, "trade_adds_after": after_adds,
         "incoming_trades": incoming, "outgoing_trades": outgoing,
         "pending_trades_error": snap.get("pending_trades_error"),
         "trade_resolutions": snap.get("trade_resolutions") or {}, "trade_resolutions_error": snap.get("trade_resolutions_error"),

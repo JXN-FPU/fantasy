@@ -7,7 +7,7 @@ from itertools import combinations
 from . import acceptance as acc
 from .lineup import optimize
 from .projections import PlayerProj
-from .season import SeasonCtx, greedy_lineup, idle_this_week, season_value, starters_ros, weekly_values
+from .season import SeasonCtx, greedy_lineup, idle_this_week, season_value, starters_ros, starters_this_week, weekly_values
 
 POS_ORDER = ("QB", "RB", "WR", "TE", "K", "D/ST")
 # Weeks the scan assumes when nobody tells it the season (tests, a bare snapshot).
@@ -410,11 +410,17 @@ def scan(my_id: int, rosters: dict[int, list[PlayerProj]], slots: dict[str, int]
             why += injury_caveats(give, values)
             games = meta.get("wins", 0) + meta.get("losses", 0)
             if games >= 4 and meta.get("losses", 0) >= meta.get("wins", 0) + 2: why.append("rival is losing (motivated)")
+            # The slots he would fill from the wire this Sunday to make the deal (his other QB on bye, or hurt): a
+            # streamer at QB is a cost he sees this week, whatever the season math says, and the row holds until it passes.
+            streams = [pos for pos in dict.fromkeys(p.pos for p in get) if pos in NO_FLEX_COVER
+                       and any(q.fantasy_team_id is None for q in starters_this_week(new_theirs, slots, their_ctx, pos))]
+            for pos in streams:
+                why.append(f"they'd have to stream {pos} this week")
             # Would he say yes: the scorecard, from what he sees.
             sig = acc.Signals(
                 fair_his=fair_his, best_side=best_side, n_give=len(give), n_get=len(get),
                 starts_for_him=max((their_starts.get(p.espn_id, 0.0) for p in give), default=0.0),
-                asks_starter=len(asks_starter), thin_after=their_new_thin, squeeze=squeeze,
+                asks_starter=len(asks_starter), thin_after=their_new_thin, streams_this_week=streams, squeeze=squeeze,
                 need_match=any(p.pos == weakest for p in give), app_grade=acc.app_grade(list(give), theirs),
                 name_value_drop=acc.name_value_drop(list(give), list(get)), playoff_pct=odds.get(rid), fills_hole=fills_hole,
                 trades=meta.get("trades"), acquisitions=meta.get("acquisitions"),
@@ -426,7 +432,8 @@ def scan(my_id: int, rosters: dict[int, list[PlayerProj]], slots: dict[str, int]
             # My gain, with a backup lost on my side charged against it; ranking is p_accept times that.
             my_gain = d_me - 0.75 * len(new_thin)
             after = rival_after(new_theirs, list(get), slots, their_ctx)
-            sendable = bool(p_accept >= acc.SENDABLE and my_gain >= 1.0 and d_them >= -0.25 and (ratio is None or ratio >= MARKET_FLOOR))
+            sendable = bool(p_accept >= acc.SENDABLE and my_gain >= 1.0 and d_them >= -0.25 and not streams
+                            and (ratio is None or ratio >= MARKET_FLOOR))
             rival_cands.append({
                 "rival_team_id": rid, "rival": meta.get("name"), "give": [p.name for p in give], "get": [p.name for p in get],
                 "my_delta_ppw": round(float(d_me), 2), "their_delta_ppw": round(float(d_them), 2),

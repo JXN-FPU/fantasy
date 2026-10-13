@@ -205,3 +205,28 @@ def test_a_rostered_qb_on_bye_this_week_is_still_the_qb_he_keeps(slots):
     left = [p for p in theirs if p.name != "TheirQB"]
     assert [p.name for p in starters_this_week(left, slots, ctx, "QB")] == ["Wire QB"]
     assert [p.name for p in starters_ros(left, slots, ctx, "QB")] == ["TheirQB2"]
+
+
+def test_asking_for_a_qb_whose_cover_is_on_bye_this_week_is_a_streaming_ask_and_not_sendable(slots):
+    """The same BUTT MUNCH shape, scored: Purdy asked in the week Burrow is on bye means he streams QB on Sunday to do
+    the deal. The scorecard halves p(accept) for it, the why says so, and the row is not sendable until the bye
+    passes; a week later (no bye) the identical ask is a normal row."""
+    mine = [P(1, "QB1", "QB", 17, tid=1), P(2, "QB2", "QB", 16, tid=1), P(3, "RB1", "RB", 16, tid=1), P(4, "RB2", "RB", 14, tid=1), P(5, "RB3", "RB", 12, tid=1),
+            P(6, "WR1", "WR", 14, tid=1), P(7, "WR2", "WR", 12, tid=1), P(8, "WR3", "WR", 10, tid=1), P(9, "TE", "TE", 8, tid=1), P(10, "K", "K", 8, tid=1), P(11, "D", "D/ST", 7, tid=1)]
+
+    def theirs(bye):
+        qb2 = P(22, "TheirQB2", "QB", 15, tid=2); qb2.bye_weeks = [5] if bye else [9]
+        return [P(21, "TheirQB", "QB", 20, tid=2), qb2, P(23, "RB1", "RB", 7, tid=2), P(24, "RB2", "RB", 6, tid=2),
+                P(25, "WR1", "WR", 14, tid=2), P(26, "WR2", "WR", 12, tid=2), P(27, "WR3", "WR", 11, tid=2), P(28, "TE", "TE", 9, tid=2), P(29, "K", "K", 8, tid=2), P(30, "D", "D/ST", 7, tid=2)]
+    repl = {"QB": 14, "RB": 7, "WR": 8, "TE": 5, "K": 6, "D/ST": 5}
+    meta = {2: {"name": "R", "wins": 2, "losses": 2, "trades": 1, "acquisitions": 4}}
+    rows = {}
+    for bye in (True, False):
+        out = scan(1, {1: mine, 2: theirs(bye)}, slots, repl, meta, values={},
+                   ctx=SeasonCtx.build(5, 9, fas=[P(90, "Wire QB", "QB", 12, tid=None)]), max_per_rival=10)
+        rows[bye] = [c for c in out if "TheirQB" in c["get"] and not any(g.startswith("QB") for g in c["give"])]
+    assert rows[True] and rows[False]
+    on_bye, clear = rows[True][0], rows[False][0]
+    assert "they'd have to stream QB this week" in on_bye["why"] and "he'd have to stream QB this week" in on_bye["accept_why"]
+    assert on_bye["p_accept"] <= 0.5 * clear["p_accept"] + 1e-6 and not on_bye["sendable"]
+    assert "they'd have to stream QB this week" not in clear["why"]

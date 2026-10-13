@@ -1,6 +1,6 @@
 {
  "version": 6,
- "generated": "2026-10-10T19:12:30",
+ "generated": "2026-10-13T18:32:56",
  "season": 2026,
  "demo": true,
  "shared": {
@@ -181,6 +181,7 @@
       "fp:B"
      ],
      "locked": false,
+     "pending_trade": null,
      "actual": null,
      "mu_pre": null,
      "sigma_ros": null,
@@ -242,6 +243,7 @@
       "fp:B"
      ],
      "locked": false,
+     "pending_trade": null,
      "actual": null,
      "mu_pre": null,
      "sigma_ros": null,
@@ -302,6 +304,7 @@
       "fp:B"
      ],
      "locked": false,
+     "pending_trade": null,
      "actual": null,
      "mu_pre": null,
      "sigma_ros": null,
@@ -364,6 +367,7 @@
       "fp:B"
      ],
      "locked": false,
+     "pending_trade": null,
      "actual": null,
      "mu_pre": null,
      "sigma_ros": null,
@@ -426,6 +430,7 @@
       "llm:p_zero"
      ],
      "locked": false,
+     "pending_trade": null,
      "actual": null,
      "mu_pre": null,
      "sigma_ros": null,
@@ -488,6 +493,7 @@
       "fp:B"
      ],
      "locked": false,
+     "pending_trade": null,
      "actual": null,
      "mu_pre": null,
      "sigma_ros": null,
@@ -551,6 +557,7 @@
       "llm:mu"
      ],
      "locked": false,
+     "pending_trade": null,
      "actual": null,
      "mu_pre": null,
      "sigma_ros": null,
@@ -613,6 +620,7 @@
       "fp:B"
      ],
      "locked": false,
+     "pending_trade": null,
      "actual": null,
      "mu_pre": null,
      "sigma_ros": null,
@@ -673,6 +681,7 @@
       "fp:B"
      ],
      "locked": false,
+     "pending_trade": null,
      "actual": null,
      "mu_pre": null,
      "sigma_ros": null,
@@ -735,6 +744,7 @@
       "fp:B"
      ],
      "locked": false,
+     "pending_trade": null,
      "actual": null,
      "mu_pre": null,
      "sigma_ros": null,
@@ -797,6 +807,7 @@
       "fp:B"
      ],
      "locked": false,
+     "pending_trade": null,
      "actual": null,
      "mu_pre": null,
      "sigma_ros": null,
@@ -858,6 +869,7 @@
       "fp:B"
      ],
      "locked": false,
+     "pending_trade": null,
      "actual": null,
      "mu_pre": null,
      "sigma_ros": null,
@@ -920,6 +932,7 @@
       "fp:B"
      ],
      "locked": false,
+     "pending_trade": null,
      "actual": null,
      "mu_pre": null,
      "sigma_ros": null,
@@ -983,6 +996,7 @@
       "fp:B"
      ],
      "locked": false,
+     "pending_trade": null,
      "actual": null,
      "mu_pre": null,
      "sigma_ros": null,
@@ -1545,230 +1559,6 @@
    ],
    "trades": [
     {
-     "rival_team_id": 4,
-     "rival": "Bye Week Blues",
-     "give": [
-      "Nico Vell"
-     ],
-     "get": [
-      "Darius Solano"
-     ],
-     "my_delta_ppw": 2.08,
-     "their_delta_ppw": -0.53,
-     "drops": [],
-     "their_drops": [],
-     "get_pos": [
-      "TE"
-     ],
-     "market_give": 0.0,
-     "market_give_eff": 0.0,
-     "market_get": 0.0,
-     "market_ratio": null,
-     "fair_his": null,
-     "best_side": null,
-     "p_accept": 0.458,
-     "accept_word": "coin flip",
-     "accept_why": [
-      "it starts for him",
-      "I ask for a player he starts today",
-      "he is out of it and sellers go quiet"
-     ],
-     "rival_after": [
-      {
-       "pos": "TE",
-       "starters": [
-        {
-         "name": "Jermaine Vell",
-         "wire": true,
-         "ppg": 11.9
-        }
-       ]
-      }
-     ],
-     "after_line": "he'd start Jermaine Vell (the wire) at TE after",
-     "sendable": false,
-     "must_try": false,
-     "why": [
-      "they start Darius Solano today",
-      "fills my TE hole",
-      "fills their WR hole"
-     ],
-     "score": 0.953,
-     "fallback": {
-      "give": [
-       "Beau Whitlock"
-      ],
-      "p_accept": 0.573,
-      "my_delta_ppw": 1.04,
-      "text": "if he says no, offer Beau Whitlock instead (coin flip)"
-     },
-     "my_title_delta": 7.3,
-     "their_title_delta": -0.1
-    },
-    {
-     "rival_team_id": 4,
-     "rival": "Bye Week Blues",
-     "give": [
-      "Nico Vell"
-     ],
-     "get": [
-      "Dontae Rutherford",
-      "Tobias Farrow"
-     ],
-     "my_delta_ppw": 1.85,
-     "their_delta_ppw": -0.46,
-     "drops": [],
-     "their_drops": [],
-     "get_pos": [
-      "RB",
-      "TE"
-     ],
-     "market_give": 0.0,
-     "market_give_eff": 0.0,
-     "market_get": 0.0,
-     "market_ratio": null,
-     "fair_his": null,
-     "best_side": null,
-     "p_accept": 0.458,
-     "accept_word": "coin flip",
-     "accept_why": [
-      "it starts for him",
-      "I ask for a player he starts today",
-      "he is out of it and sellers go quiet"
-     ],
-     "rival_after": [
-      {
-       "pos": "RB",
-       "starters": [
-        {
-         "name": "Jaxon Bassett",
-         "wire": true,
-         "ppg": 11.8
-        },
-        {
-         "name": "Landon Marchetti",
-         "wire": true,
-         "ppg": 11.1
-        }
-       ]
-      },
-      {
-       "pos": "TE",
-       "starters": [
-        {
-         "name": "Darius Solano",
-         "wire": false,
-         "ppg": 13.0
-        },
-        {
-         "name": "Jermaine Vell",
-         "wire": true,
-         "ppg": 11.9
-        }
-       ]
-      }
-     ],
-     "after_line": "he'd start Jaxon Bassett (the wire), Landon Marchetti (the wire) at RB; Darius Solano, Jermaine Vell (the wire) at TE after",
-     "sendable": false,
-     "must_try": false,
-     "why": [
-      "they start Dontae Rutherford today",
-      "fills my RB hole",
-      "fills my TE hole",
-      "fills their WR hole"
-     ],
-     "score": 0.849,
-     "fallback": {
-      "give": [
-       "Beau Whitlock"
-      ],
-      "p_accept": 0.573,
-      "my_delta_ppw": 0.81,
-      "text": "if he says no, offer Beau Whitlock instead (coin flip)"
-     },
-     "my_title_delta": 11.7,
-     "their_title_delta": -0.2
-    },
-    {
-     "rival_team_id": 4,
-     "rival": "Bye Week Blues",
-     "give": [
-      "Beau Whitlock"
-     ],
-     "get": [
-      "Darius Solano",
-      "Dontae Rutherford"
-     ],
-     "my_delta_ppw": 2.16,
-     "their_delta_ppw": 0.95,
-     "drops": [],
-     "their_drops": [],
-     "get_pos": [
-      "TE",
-      "RB"
-     ],
-     "market_give": 0.0,
-     "market_give_eff": 0.0,
-     "market_get": 0.0,
-     "market_ratio": null,
-     "fair_his": null,
-     "best_side": null,
-     "p_accept": 0.43,
-     "accept_word": "coin flip",
-     "accept_why": [
-      "it starts for him",
-      "I ask for a player he starts today",
-      "it is his weakest slot",
-      "he is out of it and sellers go quiet"
-     ],
-     "rival_after": [
-      {
-       "pos": "TE",
-       "starters": [
-        {
-         "name": "Jermaine Vell",
-         "wire": true,
-         "ppg": 11.9
-        },
-        {
-         "name": "Beau Bassett",
-         "wire": true,
-         "ppg": 9.8
-        }
-       ]
-      },
-      {
-       "pos": "RB",
-       "starters": [
-        {
-         "name": "Jaxon Bassett",
-         "wire": true,
-         "ppg": 11.8
-        },
-        {
-         "name": "Landon Marchetti",
-         "wire": true,
-         "ppg": 11.1
-        }
-       ]
-      }
-     ],
-     "after_line": "he'd start Jermaine Vell (the wire), Beau Bassett (the wire) at TE; Jaxon Bassett (the wire), Landon Marchetti (the wire) at RB after",
-     "sendable": true,
-     "must_try": false,
-     "why": [
-      "they start Darius Solano today",
-      "they start Dontae Rutherford today",
-      "fills my TE hole",
-      "fills my RB hole",
-      "fills their QB hole",
-      "leaves me no backup QB"
-     ],
-     "score": 0.604,
-     "my_title_delta": 20.5,
-     "their_title_delta": -0.2
-    },
-    {
      "rival_team_id": 7,
      "rival": "Sunday Scaries",
      "give": [
@@ -1805,12 +1595,14 @@
         {
          "name": "Elias Delacroix",
          "wire": false,
-         "ppg": 13.9
+         "ppg": 13.9,
+         "idle": null
         },
         {
          "name": "Silas Pennington",
          "wire": false,
-         "ppg": 13.5
+         "ppg": 13.5,
+         "idle": null
         }
        ]
       }
@@ -1821,25 +1613,84 @@
      "why": [
       "they start Tobias Ruiz-Hollis today"
      ],
-     "score": 0.503
+     "score": 0.503,
+     "my_title_delta": 8.2,
+     "their_title_delta": -8.1
     },
     {
-     "rival_team_id": 7,
-     "rival": "Sunday Scaries",
+     "rival_team_id": 4,
+     "rival": "Bye Week Blues",
      "give": [
-      "Deon Castellano",
       "Nico Vell"
      ],
      "get": [
-      "Elias Delacroix",
-      "Quincy Brandt"
+      "Dontae Rutherford"
      ],
-     "my_delta_ppw": 0.77,
-     "their_delta_ppw": -0.38,
+     "my_delta_ppw": 1.08,
+     "their_delta_ppw": 0.26,
      "drops": [],
      "their_drops": [],
      "get_pos": [
-      "WR",
+      "RB"
+     ],
+     "market_give": 0.0,
+     "market_give_eff": 0.0,
+     "market_get": 0.0,
+     "market_ratio": null,
+     "fair_his": null,
+     "best_side": null,
+     "p_accept": 0.458,
+     "accept_word": "coin flip",
+     "accept_why": [
+      "it starts for him",
+      "I ask for a player he starts today",
+      "he is out of it and sellers go quiet"
+     ],
+     "rival_after": [
+      {
+       "pos": "RB",
+       "starters": [
+        {
+         "name": "Jaxon Bassett",
+         "wire": true,
+         "ppg": 11.8,
+         "idle": null
+        },
+        {
+         "name": "Landon Marchetti",
+         "wire": true,
+         "ppg": 11.1,
+         "idle": null
+        }
+       ]
+      }
+     ],
+     "after_line": "he'd start Jaxon Bassett (the wire), Landon Marchetti (the wire) at RB after",
+     "sendable": true,
+     "must_try": false,
+     "why": [
+      "they start Dontae Rutherford today",
+      "fills my RB hole",
+      "fills their WR hole"
+     ],
+     "score": 0.495,
+     "my_title_delta": 6.1,
+     "their_title_delta": -0.1
+    },
+    {
+     "rival_team_id": 4,
+     "rival": "Bye Week Blues",
+     "give": [
+      "Nico Vell"
+     ],
+     "get": [
+      "Darius Solano"
+     ],
+     "my_delta_ppw": 2.08,
+     "their_delta_ppw": -0.53,
+     "drops": [],
+     "their_drops": [],
+     "get_pos": [
       "TE"
      ],
      "market_give": 0.0,
@@ -1848,36 +1699,23 @@
      "market_ratio": null,
      "fair_his": null,
      "best_side": null,
-     "p_accept": 0.505,
-     "accept_word": "coin flip",
+     "p_accept": 0.229,
+     "accept_word": null,
      "accept_why": [
       "it starts for him",
       "I ask for a player he starts today",
-      "it is his weakest slot"
+      "he'd have to stream TE this week",
+      "he is out of it and sellers go quiet"
      ],
      "rival_after": [
-      {
-       "pos": "WR",
-       "starters": [
-        {
-         "name": "Tobias Ruiz-Hollis",
-         "wire": false,
-         "ppg": 13.2
-        },
-        {
-         "name": "Tyrek Grantham",
-         "wire": false,
-         "ppg": 11.7
-        }
-       ]
-      },
       {
        "pos": "TE",
        "starters": [
         {
          "name": "Jermaine Vell",
          "wire": true,
-         "ppg": 11.9
+         "ppg": 11.9,
+         "idle": null
         }
        ]
       }
@@ -1886,30 +1724,40 @@
      "sendable": false,
      "must_try": false,
      "why": [
-      "they start Elias Delacroix today",
-      "they start Quincy Brandt today",
-      "fills my TE hole"
+      "they start Darius Solano today",
+      "fills my TE hole",
+      "fills their WR hole",
+      "they'd have to stream TE this week"
      ],
-     "score": 0.388
+     "score": 0.477,
+     "fallback": {
+      "give": [
+       "Beau Whitlock"
+      ],
+      "p_accept": 0.286,
+      "my_delta_ppw": 1.04,
+      "text": "if he says no, offer Beau Whitlock instead (likelier)"
+     },
+     "my_title_delta": 7.3,
+     "their_title_delta": -0.1
     },
     {
-     "rival_team_id": 6,
-     "rival": "Ctrl+Alt+Delete Kelce",
+     "rival_team_id": 4,
+     "rival": "Bye Week Blues",
      "give": [
-      "Omar Lindqvist",
       "Nico Vell"
      ],
      "get": [
-      "Tobias Osei",
-      "Josiah Brandt"
+      "Dontae Rutherford",
+      "Xavier Vell"
      ],
-     "my_delta_ppw": 0.84,
-     "their_delta_ppw": -0.62,
+     "my_delta_ppw": 1.36,
+     "their_delta_ppw": -0.41,
      "drops": [],
      "their_drops": [],
      "get_pos": [
-      "WR",
-      "TE"
+      "RB",
+      "RB"
      ],
      "market_give": 0.0,
      "market_give_eff": 0.0,
@@ -1917,51 +1765,42 @@
      "market_ratio": null,
      "fair_his": null,
      "best_side": null,
-     "p_accept": 0.395,
-     "accept_word": "coin flip",
+     "p_accept": 0.344,
+     "accept_word": null,
      "accept_why": [
       "it starts for him",
       "I ask for a player he starts today",
-      "he is out of it and sellers go quiet",
-      "he has traded this season"
+      "he is out of it and sellers go quiet"
      ],
      "rival_after": [
       {
-       "pos": "WR",
+       "pos": "RB",
        "starters": [
         {
-         "name": "Omar Lindqvist",
-         "wire": false,
-         "ppg": 11.4
+         "name": "Jaxon Bassett",
+         "wire": true,
+         "ppg": 11.8,
+         "idle": null
         },
         {
-         "name": "Kwame Brandt",
+         "name": "Landon Marchetti",
          "wire": true,
-         "ppg": 8.4
-        }
-       ]
-      },
-      {
-       "pos": "TE",
-       "starters": [
-        {
-         "name": "Jermaine Vell",
-         "wire": true,
-         "ppg": 11.9
+         "ppg": 11.1,
+         "idle": null
         }
        ]
       }
      ],
-     "after_line": "he'd start Omar Lindqvist, Kwame Brandt (the wire) at WR; Jermaine Vell (the wire) at TE after",
+     "after_line": "he'd start Jaxon Bassett (the wire), Landon Marchetti (the wire) at RB after",
      "sendable": false,
      "must_try": false,
      "why": [
-      "they start Tobias Osei today",
-      "they start Josiah Brandt today",
-      "fills my TE hole",
+      "they start Dontae Rutherford today",
+      "they start Xavier Vell today",
+      "fills my RB hole",
       "fills their WR hole"
      ],
-     "score": 0.332
+     "score": 0.469
     },
     {
      "rival_team_id": 7,
@@ -1998,12 +1837,14 @@
         {
          "name": "Elias Delacroix",
          "wire": false,
-         "ppg": 13.9
+         "ppg": 13.9,
+         "idle": null
         },
         {
          "name": "Tobias Ruiz-Hollis",
          "wire": false,
-         "ppg": 13.2
+         "ppg": 13.2,
+         "idle": null
         }
        ]
       }
@@ -2013,6 +1854,80 @@
      "must_try": false,
      "why": [],
      "score": 0.281
+    },
+    {
+     "rival_team_id": 7,
+     "rival": "Sunday Scaries",
+     "give": [
+      "Deon Castellano",
+      "Nico Vell"
+     ],
+     "get": [
+      "Elias Delacroix",
+      "Quincy Brandt"
+     ],
+     "my_delta_ppw": 0.77,
+     "their_delta_ppw": -0.38,
+     "drops": [],
+     "their_drops": [],
+     "get_pos": [
+      "WR",
+      "TE"
+     ],
+     "market_give": 0.0,
+     "market_give_eff": 0.0,
+     "market_get": 0.0,
+     "market_ratio": null,
+     "fair_his": null,
+     "best_side": null,
+     "p_accept": 0.253,
+     "accept_word": null,
+     "accept_why": [
+      "it starts for him",
+      "I ask for a player he starts today",
+      "he'd have to stream TE this week",
+      "it is his weakest slot"
+     ],
+     "rival_after": [
+      {
+       "pos": "WR",
+       "starters": [
+        {
+         "name": "Tobias Ruiz-Hollis",
+         "wire": false,
+         "ppg": 13.2,
+         "idle": null
+        },
+        {
+         "name": "Tyrek Grantham",
+         "wire": false,
+         "ppg": 11.7,
+         "idle": null
+        }
+       ]
+      },
+      {
+       "pos": "TE",
+       "starters": [
+        {
+         "name": "Jermaine Vell",
+         "wire": true,
+         "ppg": 11.9,
+         "idle": null
+        }
+       ]
+      }
+     ],
+     "after_line": "he'd start Jermaine Vell (the wire) at TE after",
+     "sendable": false,
+     "must_try": false,
+     "why": [
+      "they start Elias Delacroix today",
+      "they start Quincy Brandt today",
+      "fills my TE hole",
+      "they'd have to stream TE this week"
+     ],
+     "score": 0.195
     }
    ],
    "injuries": [
@@ -2098,17 +2013,23 @@
     }
    ],
    "ir_events": [],
+   "pending_moves": [],
+   "trade_spots_after": 0,
+   "trade_adds_after": [],
    "incoming_trades": [
     {
      "id": "in-1",
      "rival_team_id": 2,
      "rival": "The Tuesday Regrets",
-     "proposed_iso": "2026-10-10T16:12",
-     "expires_iso": "2026-10-11T16:12",
+     "proposed_iso": "2026-10-13T15:32",
+     "expires_iso": "2026-10-14T15:32",
      "hours_left": 21.0,
-     "proposed_ts": 1791648748218,
-     "expires_ts": 1791735148218,
+     "proposed_ts": 1791905572865,
+     "expires_ts": 1791991972865,
      "unmatched_ids": [],
+     "accepted": false,
+     "process_ts": null,
+     "processes_iso": null,
      "counter": null,
      "give": [
       "Jalen Haggerty",
@@ -2137,17 +2058,20 @@
         {
          "name": "Deon Castellano",
          "wire": false,
-         "ppg": 14.7
+         "ppg": 14.7,
+         "idle": null
         },
         {
          "name": "Jaxon Bassett",
          "wire": true,
-         "ppg": 11.8
+         "ppg": 11.8,
+         "idle": null
         },
         {
          "name": "Landon Marchetti",
          "wire": true,
-         "ppg": 11.1
+         "ppg": 11.1,
+         "idle": null
         }
        ]
       },
@@ -2157,12 +2081,14 @@
         {
          "name": "Omar Lindqvist",
          "wire": false,
-         "ppg": 11.4
+         "ppg": 11.4,
+         "idle": null
         },
         {
          "name": "Kwame Brandt",
          "wire": true,
-         "ppg": 8.4
+         "ppg": 8.4,
+         "idle": null
         }
        ]
       }
@@ -2176,12 +2102,15 @@
      "id": "out-1",
      "rival_team_id": 3,
      "rival": "Waiver Wire Widows",
-     "proposed_iso": "2026-10-10T16:12",
-     "expires_iso": "2026-10-11T16:12",
+     "proposed_iso": "2026-10-13T15:32",
+     "expires_iso": "2026-10-14T15:32",
      "hours_left": 21.0,
-     "proposed_ts": 1791648748218,
-     "expires_ts": 1791735148218,
+     "proposed_ts": 1791905572865,
+     "expires_ts": 1791991972865,
      "unmatched_ids": [],
+     "accepted": false,
+     "process_ts": null,
+     "processes_iso": null,
      "give": [
       "Rico Achebe"
      ],

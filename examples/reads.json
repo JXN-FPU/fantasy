@@ -1,13 +1,24 @@
 {
   "demo": {
-    "read": "Rutherford's boot was precautionary and he practiced in full Thursday, so the package is live. Ibarra is still a game-time call, so Whitlock has to stay through Sunday; send the offer Monday. Brandt is a bye-week body until Sorensen is back in week 9, not a starter.",
+    "read": "Rutherford's boot was precautionary and he practiced in full Thursday, so the ask is live. Ibarra is still a game-time call, so Whitlock starts Sunday. Brandt is a bye-week body until Sorensen is back in week 9, not a starter.",
     "items": {
-      "offer:dontae-kowalczyk": {"verdict": "do"},
-      "injury:grady-sorensen": {"verdict": "amend", "note": "Brandt is cover for the Sorensen weeks only; he is the first cut when a spot is needed"},
-      "waiver:jermaine-vell": {"verdict": "amend", "note": "the full bid is right; Beau Bassett is the fallback if you're outbid"},
-      "trade:darius-solano-dontae-rutherford": {"verdict": "amend", "note": "send it Monday, not today: Ibarra is a game-time call and Whitlock is your only other QB this week"}
+      "offer:dontae-kowalczyk": {
+        "verdict": "do"
+      },
+      "injury:grady-sorensen": {
+        "verdict": "amend",
+        "note": "Brandt is cover for the Sorensen weeks only; he is the first cut when a spot is needed"
+      },
+      "waiver:jermaine-vell": {
+        "verdict": "amend",
+        "note": "the full bid is right; Beau Bassett is the fallback if you're outbid"
+      },
+      "trade:dontae-rutherford": {
+        "verdict": "amend",
+        "note": "send it today: Rutherford practiced in full, and Bye Week Blues has been streaming RB all month anyway, so the wire bodies the row names are what he runs out now"
+      }
     },
-    "paste": "hey, would you do Solano + Rutherford for Whitlock? you've been streaming QB and he'd start for you every week, and I need the bodies back for byes. no worries if not",
+    "paste": "hey, would you do Nico Vell for Rutherford? you've been thin at WR and he'd start for you every week, and I need an RB body back for byes. no worries if not",
     "paste_to": "Bye Week Blues",
     "reply": "appreciate it but I'm gonna hold for now, hit me up if you'd do Kowalczyk for Haggerty straight up",
     "reply_to": "The Tuesday Regrets"
