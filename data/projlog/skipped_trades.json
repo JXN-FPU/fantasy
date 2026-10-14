@@ -432,5 +432,18 @@
    "Christian Watson"
   ],
   "note": "one QB fix at a time, and that's the Purdy ask above. St. Brown is a top five WR for a QB you'd bench the day Purdy lands"
+ },
+ "L1|Christian Watson+Patrick Mahomes": {
+  "date": "2026-10-14",
+  "league": "L1",
+  "rival": "CTESPN",
+  "give": [
+   "Amon-Ra St. Brown"
+  ],
+  "get": [
+   "Christian Watson",
+   "Patrick Mahomes"
+  ],
+  "note": "Amon-Ra is your best WR for the stretch run and the Purdy deal already fixes QB. Don't do both."
  }
 }

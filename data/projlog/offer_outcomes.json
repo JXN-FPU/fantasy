@@ -31,7 +31,7 @@
   "closed": "2026-10-09"
  },
  "L1|92378dd4-8208-4270-bc26-98c817ca7728": {
-  "status": "open",
+  "status": "accepted",
   "league": "L1",
   "rival": "Deep Ballers",
   "rival_team_id": 4,
@@ -46,7 +46,8 @@
   "opened": "2026-10-13",
   "expires": "2026-10-14T17:04",
   "expires_ts": 1791997486924,
-  "proposed_ts": 1791824686897
+  "proposed_ts": 1791824686897,
+  "closed": "2026-10-14"
  },
  "L3|30ee433e-c20c-4f72-ad7f-61b838b14790": {
   "status": "withdrawn",
