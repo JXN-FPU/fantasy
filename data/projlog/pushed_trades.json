@@ -104,7 +104,7 @@
   "skip_note": "four mornings is enough. Bryce Young is barely a bump on Brissett and it costs Olave to get him, while the Mahomes offer and the Purdy one both fix QB without touching your WRs"
  },
  "L1|Brock Purdy+Tee Higgins": {
-  "status": "open",
+  "status": "sent",
   "since": "2026-10-13",
   "last": "2026-10-13",
   "league": "L1",
@@ -118,6 +118,7 @@
    "Tee Higgins"
   ],
   "source": "math",
-  "note": null
+  "note": null,
+  "closed": "2026-10-15"
  }
 }
