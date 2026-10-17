@@ -120,5 +120,21 @@
   "source": "math",
   "note": null,
   "closed": "2026-10-15"
+ },
+ "L3|Aaron Jones Sr.+Josh Allen": {
+  "status": "open",
+  "since": "2026-10-17",
+  "last": "2026-10-17",
+  "league": "L3",
+  "rival": "Down Bad",
+  "give": [
+   "Jonathan Taylor"
+  ],
+  "get": [
+   "Josh Allen",
+   "Aaron Jones Sr."
+  ],
+  "source": "math",
+  "note": null
  }
 }

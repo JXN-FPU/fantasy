@@ -67,7 +67,7 @@
   "closed": "2026-10-13"
  },
  "L1|5326d4e6-0eec-49c9-8ae3-dc8a2305589e": {
-  "status": "open",
+  "status": "expired",
   "league": "L1",
   "rival": "Touchin on dis TDS",
   "rival_team_id": 11,
@@ -82,6 +82,7 @@
   "opened": "2026-10-15",
   "expires": "2026-10-16T15:26",
   "expires_ts": 1792164373739,
-  "proposed_ts": 1791991573712
+  "proposed_ts": 1791991573712,
+  "closed": "2026-10-17"
  }
 }
