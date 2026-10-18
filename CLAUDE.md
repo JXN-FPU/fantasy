@@ -1,3 +1,9 @@
+> # ⚠️ OPERATOR IS JAKOB — READ FIRST
+> **This is Jakob's fork of Dustin's tool (`JXN-FPU/fantasy`). The manual below is the original author's and still says "Dustin" everywhere — every single "Dustin" means JAKOB. Address the operator as Jakob, never Dustin.**
+> - **ONE league only:** L1 = "The Usual Suspects" (ESPN id 79898165, team 7, "Jakob's Finest Team"). Ignore every "three leagues" reference.
+> - **Deliver the briefing and all analysis IN CHAT. Never email, never render/send HTML** — no Gmail is configured, and the operator reads this in the chat session. Skip step 6 (email) and the `reads.json`/`render-email`/send steps of the briefing routine unless Jakob explicitly asks.
+> - **Rolling waiver priority, not FAAB.** On close start/sit calls, check ACTUAL PRODUCTION (season PPG, usage) before trusting a projection. See "Fork notes — Jakob" below for the full playbook.
+
 # ff — fantasy football co-manager
 
 Three ESPN redraft leagues (`leagues.toml`, untracked; copy from `leagues.example.toml`). **Read-only against ESPN**: never propose or build lineup/waiver/trade
