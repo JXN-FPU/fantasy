@@ -3,6 +3,21 @@
 Three ESPN redraft leagues (`leagues.toml`, untracked; copy from `leagues.example.toml`). **Read-only against ESPN**: never propose or build lineup/waiver/trade
 writes or ESPN chat posting. Dustin taps the buttons.
 
+## Fork notes — Jakob (JXN-FPU fork)
+This is Jakob's fork, not Dustin's. **ONE league only: L1 = "The Usual Suspects"** (ESPN id 79898165, team 7, "Jakob's Finest Team").
+Read every "Dustin" / "three leagues" reference below as Jakob and this one league. **Rolling waiver priority, not FAAB** — ignore any
+FAAB/bid columns. No Gmail/email routine is set up here; deliver the briefing and analysis **in chat**, not by email.
+
+**Analysis lessons (hard-learned — follow them):**
+- On close start/sit calls, **check ACTUAL PRODUCTION FIRST** — season PPG, target share, carry/snap volume (`ff.model.usage.season_summary`)
+  — before quoting any projection or repeating `lineup_win`'s recommended lineup. Its `mu` is a 50/50 ESPN/Sleeper blend, so one bullish
+  source flips a close call the wrong way. When a projection disagrees with production, reconcile *why* (a high number with no role change
+  behind it is usually a speculative rebound — discount it). This cost real points twice: benching Kyren Williams (36.6 that day) on a matchup
+  read, and recommending Tate over the better-producing Vele off one bullish Sleeper number.
+- **Lead with Sleeper + FantasyCalc** (and KTC via a web lookup; it is not cached), not ESPN `proj_week`. Do the full multi-source sweep of
+  the whole free-agent pool proactively, across all positions, and surface buy-low / upside stashes the "beats your starter" filter misses.
+- **Web-search injury status** (beat writers, practice reports) for any Questionable / Doubtful / returning starter before locking a lineup.
+
 ## Boundary rule
 Code owns state and math. Claude owns judgment over unstructured text and prose.
 Claude returns *parameters and prose*, never *decisions or state*. Every number in the briefing comes from `ff`.
