@@ -172,6 +172,12 @@ def analyze_league(snap: dict, xw: Crosswalk, fp_index: dict, inj: dict, trendin
         else:
             opp_week, opp_lineup = optimize(by_team[opp_id], slots, objective="ev"), "projected"
         opp_mu, opp_var = opp_week.mu, opp_week.var
+        # A non-positive opponent projection means we couldn't project them (missing data, or every eligible
+        # player locked at 0). Treat it as unknown so the win-objective optimizer doesn't see a 0-point opponent,
+        # saturate P(win) at 1.0, and return a min-variance degenerate lineup; fall back to the max-points lineup
+        # below and report the opponent honestly instead of as a phantom 0.
+        if opp_mu is None or opp_mu <= 0:
+            opp_mu, opp_var = None, None
 
     mine = by_team.get(my_id, [])
     ev_lu = optimize(mine, slots, objective="ev")
@@ -366,8 +372,8 @@ def analyze_league(snap: dict, xw: Crosswalk, fp_index: dict, inj: dict, trendin
         "week_state": wstate,
         "faab_remaining": budget if s["faab"] else None,
         "waiver_rank": teams[my_id]["waiver_rank"] if my_id in teams else None,
-        "opponent": {"team_id": opp_id, "name": teams[opp_id]["name"] if opp_id in teams else None, "mu": round(opp_mu, 1) if opp_mu else None,
-                     "sd": round(opp_var ** 0.5, 1) if opp_var else None, "lineup": opp_lineup},
+        "opponent": {"team_id": opp_id, "name": teams[opp_id]["name"] if opp_id in teams else None, "mu": round(opp_mu, 1) if opp_mu is not None else None,
+                     "sd": round(opp_var ** 0.5, 1) if opp_var is not None else None, "lineup": opp_lineup},
         "roster": [enrich(p) for p in sorted(mine, key=lambda p: (-p.ev))],
         "current_lineup_mu": round(cur_mu, 1),
         "lineup_ev": ev_lu.to_dict(), "lineup_win": win_lu.to_dict(), "lineup_diff": compare(ev_lu, win_lu),
